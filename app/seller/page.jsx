@@ -72,7 +72,7 @@ const AddProduct = () => {
       >
         {/* Product Images */}
         <div>
-          <p className="text-base font-medium text-[#5C66F0]">Product Image</p>
+          <p className="text-base font-medium text-[#ea580b]">Product Image</p>
           <div className="flex flex-wrap items-center gap-3 mt-2">
             {[...Array(4)].map((_, index) => (
               <label key={index} htmlFor={`image${index}`}>
@@ -104,7 +104,7 @@ const AddProduct = () => {
 
         {/* Product Name */}
         <div className="flex flex-col gap-1 max-w-md">
-          <label htmlFor="product-name" className="text-base font-medium text-[#5C66F0]">
+          <label htmlFor="product-name" className="text-base font-medium text-[#ea580b]">
             Product Name
           </label>
           <input
@@ -120,7 +120,7 @@ const AddProduct = () => {
 
         {/* Product Description */}
         <div className="flex flex-col gap-1 max-w-md">
-          <label htmlFor="product-description" className="text-base font-medium text-[#5C66F0]">
+          <label htmlFor="product-description" className="text-base font-medium text-[#ea580b]">
             Product Description
           </label>
           <textarea
@@ -137,7 +137,7 @@ const AddProduct = () => {
         {/* Category, Price, Offer Price */}
         <div className="flex items-center gap-5 flex-wrap">
           <div className="flex flex-col gap-1 w-32">
-            <label htmlFor="category" className="text-base font-medium text-[#5C66F0]">
+            <label htmlFor="category" className="text-base font-medium text-[#ea580b]">
               Category
             </label>
             <select
@@ -157,7 +157,7 @@ const AddProduct = () => {
           </div>
 
           <div className="flex flex-col gap-1 w-32">
-            <label htmlFor="product-price" className="text-base font-medium text-[#5C66F0]">
+            <label htmlFor="product-price" className="text-base font-medium text-[#ea580b]">
               Product Price
             </label>
             <input
@@ -172,7 +172,7 @@ const AddProduct = () => {
           </div>
 
           <div className="flex flex-col gap-1 w-32">
-            <label htmlFor="offer-price" className="text-base font-medium text-[#5C66F0]">
+            <label htmlFor="offer-price" className="text-base font-medium text-[#ea580b]">
               Offer Price
             </label>
             <input
@@ -188,7 +188,7 @@ const AddProduct = () => {
 
         <button
           type="submit"
-          className="px-8 py-2.5 bg-[#5C66F0] text-white font-medium rounded hover:bg-[#4A54D4] transition"
+          className="px-8 py-2.5 bg-[#ea580b] text-white font-medium rounded hover:bg-white hover:text-[#ea580b] transition"
         >
           ADD
         </button>

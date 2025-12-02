@@ -30,27 +30,24 @@ const ProductList = () => {
     }
   };
 
-const handleDelete = async (productId, productName) => {
+  const handleDelete = async (productId, productName) => {
+    try {
+      setDeleting(productId);
 
-  try {
-    setDeleting(productId);
+      const { data } = await axios.delete(`/api/product/admin/products/${productId}`);
 
-    const { data } = await axios.delete(`/api/product/admin/products/${productId}`);
-
-    if (data.success) {
-      alert("Product deleted successfully!");
-
-      setProducts((prev) => prev.filter((p) => p._id !== productId));
-    } else {
-      alert("❌ " + (data.error || "Failed to delete product"));
+      if (data.success) {
+        alert("Product deleted successfully!");
+        setProducts((prev) => prev.filter((p) => p._id !== productId));
+      } else {
+        alert("❌ " + (data.error || "Failed to delete product"));
+      }
+    } catch (error) {
+      alert("❌ " + (error.response?.data?.error || "Something went wrong"));
+    } finally {
+      setDeleting(null);
     }
-  } catch (error) {
-    alert("❌ " + (error.response?.data?.error || "Something went wrong"));
-  } finally {
-    setDeleting(null);
-  }
-};
-
+  };
 
   useEffect(() => {
     fetchSellerProduct();
@@ -64,19 +61,19 @@ const handleDelete = async (productId, productName) => {
       {loading ? (
         <Loading />
       ) : (
-        <div className="w-full md:p-10 p-4">
-          <div className="flex justify-between items-center pb-4">
-            <h2 className="text-lg font-medium">All Products</h2>
-            <div className="text-sm text-gray-600">
-              Total: <span className="font-semibold">{products.length}</span> products
+        <div className="w-full px-3 py-3 sm:px-4 sm:py-4 md:p-10">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 sm:pb-4 gap-2">
+            <h2 className="text-base sm:text-lg font-medium">All Products</h2>
+            <div className="text-xs sm:text-sm text-gray-600">
+              Total: <span className="font-semibold">{products.length}</span> {products.length === 1 ? 'product' : 'products'}
             </div>
           </div>
 
           {products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 bg-white rounded-lg border border-gray-200">
-              <div className="text-gray-400 text-4xl mb-4">📦</div>
-              <p className="text-gray-600 text-lg font-medium">No products found</p>
-              <p className="text-gray-400 text-sm mt-2">Start by adding your first product</p>
+            <div className="flex flex-col items-center justify-center py-8 sm:py-12 bg-white rounded-lg border border-gray-200">
+              <div className="text-gray-400 text-3xl sm:text-4xl mb-3 sm:mb-4">📦</div>
+              <p className="text-gray-600 text-base sm:text-lg font-medium">No products found</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1 sm:mt-2">Start by adding your first product</p>
             </div>
           ) : (
             <>
@@ -153,32 +150,36 @@ const handleDelete = async (productId, productName) => {
                 </table>
               </div>
 
-              {/* Mobile Cards */}
-              <div className="block sm:hidden space-y-3">
+              {/* Mobile Cards - Optimized for iPhone 5s (320px) */}
+              <div className="block sm:hidden space-y-2.5">
                 {products.map((product) => (
-                  <div key={product._id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                    <div className="flex gap-3 mb-3">
-                      <Image
-                        src={product.image[0] || assets.upload_area}
-                        alt="product"
-                        className="w-20 h-20 object-cover rounded"
-                        width={80}
-                        height={80}
-                      />
+                  <div key={product._id} className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+                    <div className="flex gap-2.5 mb-3">
+                      <div className="flex-shrink-0">
+                        <Image
+                          src={product.image[0] || assets.upload_area}
+                          alt="product"
+                          className="w-16 h-16 object-cover rounded"
+                          width={64}
+                          height={64}
+                        />
+                      </div>
 
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm text-gray-900 line-clamp-2 mb-1.5">
+                          {product.name}
+                        </h3>
 
-                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full inline-block my-2">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full inline-block">
                           {product.category}
                         </span>
 
-                        <div className="text-sm">
+                        <div className="text-sm mt-1.5">
                           <span className="font-semibold text-gray-900">
                             ${product.offerPrice || product.price}
                           </span>
                           {product.offerPrice && (
-                            <span className="ml-2 text-xs text-gray-400 line-through">
+                            <span className="ml-1.5 text-xs text-gray-400 line-through">
                               ${product.price}
                             </span>
                           )}
@@ -189,7 +190,7 @@ const handleDelete = async (productId, productName) => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => router.push(`/product/${product._id}`)}
-                        className="flex-1 px-3 py-2 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 transition"
+                        className="flex-1 px-3 py-2 bg-orange-600 text-white text-xs font-medium rounded-md hover:bg-orange-700 transition active:bg-orange-800"
                       >
                         Visit
                       </button>
@@ -198,7 +199,7 @@ const handleDelete = async (productId, productName) => {
                         <button
                           onClick={() => handleDelete(product._id, product.name)}
                           disabled={deleting === product._id}
-                          className="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition disabled:opacity-50"
+                          className="flex-shrink-0 px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed active:bg-red-800 min-w-[70px]"
                         >
                           {deleting === product._id ? "..." : "Delete"}
                         </button>

@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 export const metadata = {
   title: "About Us | 7even86gamehub",
   description:
-    "Learn more about 7even86gamehub – your trusted online shopping destination for fashion, electronics, and lifestyle products. Discover our mission, values, and vision.",
+    "Learn more about 7even86gamehub, our mission, vision, and the values that drive us to provide the best online shopping experience in Pakistan.",
 };
 
 export default function AboutPage() {

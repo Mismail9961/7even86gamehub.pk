@@ -8,8 +8,8 @@ import SessionWrapper from "@/components/SessionWrapper";
 const outfit = Outfit({ subsets: ['latin'], weight: ["300", "400", "500"] })
 
 export const metadata = {
-  title: "QuickCart - GreatStack",
-  description: "E-Commerce with Next.js ",
+  title: "7even86gamehub.pk",
+  description: "Your one-stop shop for gaming consoles, accessories, and more in Pakistan.",
 };
 
 export default function RootLayout({ children }) {

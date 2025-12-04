@@ -35,7 +35,8 @@ const ForgotPassword = () => {
         email: email.toLowerCase(),
       });
 
-      if (data.success) {
+      // Check for message property instead of success
+      if (data.message) {
         toast.success(data.message);
         setSubmitted(true);
       } else {

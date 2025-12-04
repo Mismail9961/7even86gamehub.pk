@@ -43,11 +43,9 @@ export async function POST(req) {
     user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    // Configure email transporter
+    // Configure Gmail transporter
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT),
-      secure: false, // Use true for port 465
+      service: 'gmail', // Use Gmail service
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -65,38 +63,41 @@ export async function POST(req) {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+            .header { background-color: #FF6B35; color: white; padding: 20px; text-align: center; }
             .content { background-color: #f9f9f9; padding: 30px; }
             .button { 
               display: inline-block; 
               padding: 12px 30px; 
-              background-color: #4CAF50; 
+              background-color: #FF6B35; 
               color: white; 
               text-decoration: none; 
               border-radius: 5px;
               margin: 20px 0;
             }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+            .logo { font-size: 24px; font-weight: bold; color: white; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
+              <div class="logo">7even86gamehub</div>
               <h2>Password Reset Request</h2>
             </div>
             <div class="content">
               <p>Hello,</p>
-              <p>You recently requested to reset your password for your Quick Cart account. Click the button below to reset it:</p>
+              <p>You recently requested to reset your password for your 7even86gamehub account. Click the button below to reset it:</p>
               <div style="text-align: center;">
                 <a href="${resetLink}" class="button">Reset Password</a>
               </div>
               <p>Or copy and paste this link into your browser:</p>
-              <p style="word-break: break-all; color: #4CAF50;">${resetLink}</p>
+              <p style="word-break: break-all; color: #FF6B35;">${resetLink}</p>
               <p><strong>This link will expire in 1 hour.</strong></p>
               <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
-              <p>Best regards,<br>Quick Cart Team</p>
+              <p>Best regards,<br>7even86gamehub Team<br>7even86gamehub.pk</p>
             </div>
             <div class="footer">
+              <p>© ${new Date().getFullYear()} 7even86gamehub.pk. All rights reserved.</p>
               <p>This is an automated email. Please do not reply.</p>
             </div>
           </div>
@@ -106,12 +107,13 @@ export async function POST(req) {
 
     // Send email
     await transporter.sendMail({
-      from: `"Quick Cart Support" <${process.env.SMTP_USER}>`,
+      from: `"7even86gamehub Support" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: "Password Reset Request - Quick Cart",
+      subject: "Password Reset Request - 7even86gamehub",
       html: emailHTML,
-      text: `You requested a password reset. Click here to reset your password: ${resetLink}. This link expires in 1 hour.`,
     });
+
+    console.log("✅ Password reset email sent successfully to:", email);
 
     return new Response(
       JSON.stringify({ 
@@ -121,17 +123,23 @@ export async function POST(req) {
     );
 
   } catch (err) {
-    console.error("Forgot password error:", err);
+    console.error("❌ Forgot password error:", err);
     
-    // Check for specific email errors
-    if (err.code === 'EAUTH') {
-      console.error("SMTP Authentication failed. Check your credentials.");
-    } else if (err.code === 'ECONNECTION') {
-      console.error("SMTP Connection failed. Check host and port.");
+    // Check for specific Gmail errors
+    if (err.code === 'EAUTH' || err.responseCode === 535) {
+      console.error("Gmail authentication failed. Your app password may be incorrect.");
+      console.error("Steps to fix:");
+      console.error("1. Go to https://myaccount.google.com/apppasswords");
+      console.error("2. Create new app password");
+      console.error("3. Update SMTP_PASS in .env.local (remove all spaces)");
+      console.error("4. Restart your dev server");
     }
     
     return new Response(
-      JSON.stringify({ error: "Unable to process request. Please try again later." }), 
+      JSON.stringify({ 
+        error: "Unable to send email. Please try again later.",
+        debug: process.env.NODE_ENV === 'development' ? err.message : undefined
+      }), 
       { status: 500 }
     );
   }

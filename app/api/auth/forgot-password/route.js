@@ -1,246 +1,137 @@
-import { NextResponse } from "next/server";
-import connectDB from "@/lib/db";
 import User from "@/models/User";
+import connectDB from "@/lib/db";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-
-// Create Gmail Transporter
-const createTransporter = () => {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPassword = process.env.EMAIL_PASSWORD;
-
-  if (!emailUser || !emailPassword) {
-    console.error("❌ Email credentials missing!");
-    console.error({
-      EMAIL_USER: emailUser ? "✓ Set" : "✗ Missing",
-      EMAIL_PASSWORD: emailPassword ? "✓ Set" : "✗ Missing",
-    });
-    return null;
-  }
-
-  console.log("📧 Email Config:", {
-    user: emailUser,
-    passwordLength: emailPassword.length,
-  });
-
-  return nodemailer.createTransport({
-    service: "gmail",
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: emailUser,
-      pass: emailPassword,
-    },
-  });
-};
 
 export async function POST(req) {
   try {
     const { email } = await req.json();
-
-    // Validate email input
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: "Email is required" },
-        { status: 400 }
-      );
-    }
-
-    // Connect to database
-    await connectDB();
-    console.log("✅ Database connected");
-
-    // Find user
-    const user = await User.findOne({ email: email.toLowerCase() });
-    console.log("🔍 User lookup:", email, user ? "Found" : "Not found");
-
-    if (!user) {
-      // Security: Don't reveal if user exists
-      return NextResponse.json({
-        success: true,
-        message: "If an account exists with this email, you will receive a password reset link.",
-      });
-    }
-
-    // Check if user uses Google OAuth
-    if (user.provider === "google" && !user.password) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "This account uses Google sign-in. Please use 'Sign in with Google' instead.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Generate reset token (NO HASHING)
-    const resetToken = crypto.randomBytes(32).toString("hex");
     
-    // Save token to database
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    // Validate email
+    if (!email) {
+      return new Response(
+        JSON.stringify({ error: "Email required" }), 
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }), 
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    // Security: Don't reveal if user exists or not
+    if (!user) {
+      // Still return success to prevent email enumeration
+      return new Response(
+        JSON.stringify({ message: "If an account exists, a reset email has been sent" }), 
+        { status: 200 }
+      );
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetToken = crypto.createHash("sha256").update(token).digest("hex");
+    user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    console.log("✅ Token saved:", {
-      email: user.email,
-      token: resetToken.substring(0, 10) + "...",
-      expires: new Date(user.resetPasswordExpires).toLocaleString(),
+    // Configure email transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT),
+      secure: false, // Use true for port 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
     });
 
-    // Create email transporter
-    const transporter = createTransporter();
+    // Create reset link
+    const resetLink = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
 
-    if (!transporter) {
-      // Development mode - log reset URL
-      const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${resetToken}`;
-      console.log("\n🔐 DEVELOPMENT MODE - PASSWORD RESET URL:");
-      console.log(resetUrl);
-      console.log("\n");
-
-      return NextResponse.json({
-        success: true,
-        message: "Email service unavailable. Check server logs for reset link.",
-        devMode: true,
-        resetUrl: resetUrl, // Only in dev
-      });
-    }
-
-    // Create reset URL
-    const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${resetToken}`;
-
-    // Email content
-    const mailOptions = {
-      from: `"7even Game Hub" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: "Password Reset Request - 7even Game Hub",
-      html: `
-        <!DOCTYPE html>
-        <html>
+    // Email template
+    const emailHTML = `
+      <!DOCTYPE html>
+      <html>
         <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+            .content { background-color: #f9f9f9; padding: 30px; }
+            .button { 
+              display: inline-block; 
+              padding: 12px 30px; 
+              background-color: #4CAF50; 
+              color: white; 
+              text-decoration: none; 
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
-            <tr>
-              <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                  
-                  <!-- Header -->
-                  <tr>
-                    <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 30px; text-align: center;">
-                      <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🎮 7even Game Hub</h1>
-                    </td>
-                  </tr>
-                  
-                  <!-- Content -->
-                  <tr>
-                    <td style="padding: 40px 30px;">
-                      <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Password Reset Request</h2>
-                      
-                      <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
-                        Hello <strong>${user.name || "User"}</strong>,
-                      </p>
-                      
-                      <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
-                        We received a request to reset your password for your 7even Game Hub account.
-                      </p>
-                      
-                      <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                        Click the button below to reset your password:
-                      </p>
-                      
-                      <!-- Button -->
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td align="center" style="padding: 0 0 30px 0;">
-                            <a href="${resetUrl}" 
-                               style="display: inline-block; padding: 16px 40px; background-color: #f97316; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(249, 115, 22, 0.3);">
-                              Reset My Password
-                            </a>
-                          </td>
-                        </tr>
-                      </table>
-                      
-                      <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0;">
-                        Or copy and paste this link into your browser:
-                      </p>
-                      
-                      <p style="color: #f97316; word-break: break-all; font-size: 13px; background-color: #f9fafb; padding: 15px; border-radius: 6px; border-left: 4px solid #f97316; margin: 0 0 30px 0;">
-                        ${resetUrl}
-                      </p>
-                      
-                      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 6px; margin: 0 0 30px 0;">
-                        <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
-                          ⚠️ <strong>Important:</strong> This link will expire in <strong>1 hour</strong>.
-                        </p>
-                      </div>
-                      
-                      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-                      
-                      <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0;">
-                        If you didn't request this password reset, please ignore this email. Your password will remain unchanged. For security reasons, we recommend changing your password regularly.
-                      </p>
-                    </td>
-                  </tr>
-                  
-                  <!-- Footer -->
-                  <tr>
-                    <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                      <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                        © ${new Date().getFullYear()} 7even Game Hub. All rights reserved.
-                      </p>
-                      <p style="color: #9ca3af; font-size: 12px; margin: 10px 0 0 0;">
-                        This is an automated message, please do not reply to this email.
-                      </p>
-                    </td>
-                  </tr>
-                  
-                </table>
-              </td>
-            </tr>
-          </table>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>Password Reset Request</h2>
+            </div>
+            <div class="content">
+              <p>Hello,</p>
+              <p>You recently requested to reset your password for your Quick Cart account. Click the button below to reset it:</p>
+              <div style="text-align: center;">
+                <a href="${resetLink}" class="button">Reset Password</a>
+              </div>
+              <p>Or copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #4CAF50;">${resetLink}</p>
+              <p><strong>This link will expire in 1 hour.</strong></p>
+              <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
+              <p>Best regards,<br>Quick Cart Team</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated email. Please do not reply.</p>
+            </div>
+          </div>
         </body>
-        </html>
-      `,
-    };
-
-    console.log("📧 Attempting to send email to:", user.email);
+      </html>
+    `;
 
     // Send email
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("✅ Email sent successfully!");
-    console.log("Message ID:", info.messageId);
-
-    return NextResponse.json({
-      success: true,
-      message: "Password reset link sent to your email.",
+    await transporter.sendMail({
+      from: `"Quick Cart Support" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Password Reset Request - Quick Cart",
+      html: emailHTML,
+      text: `You requested a password reset. Click here to reset your password: ${resetLink}. This link expires in 1 hour.`,
     });
 
-  } catch (error) {
-    console.error("❌ Forgot password error:", error);
+    return new Response(
+      JSON.stringify({ 
+        message: "If an account exists, a reset email has been sent" 
+      }), 
+      { status: 200 }
+    );
 
-    // Detailed error logging
-    if (error.code) {
-      console.error("Error code:", error.code);
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    
+    // Check for specific email errors
+    if (err.code === 'EAUTH') {
+      console.error("SMTP Authentication failed. Check your credentials.");
+    } else if (err.code === 'ECONNECTION') {
+      console.error("SMTP Connection failed. Check host and port.");
     }
-    if (error.response) {
-      console.error("SMTP Response:", error.response);
-    }
-    if (error.responseCode) {
-      console.error("Response code:", error.responseCode);
-    }
-    if (error.command) {
-      console.error("Failed command:", error.command);
-    }
-
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: "Failed to send reset email. Please try again later." 
-      },
+    
+    return new Response(
+      JSON.stringify({ error: "Unable to process request. Please try again later." }), 
       { status: 500 }
     );
   }

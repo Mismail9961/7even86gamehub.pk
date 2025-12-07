@@ -64,7 +64,7 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
           <div className="relative px-4 xs:px-6 py-4 xs:py-5 border-b border-white/10">
             <div className="flex items-center justify-between">
               <h1 className="text-lg xs:text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                GameStop
+                7even86gamehub
               </h1>
               <button
                 onClick={() => setShowSidebar(false)}
@@ -308,7 +308,7 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
           {/* Footer */}
           <div className="px-4 xs:px-6 py-3 xs:py-4 border-t border-white/10 bg-black/40">
             <p className="text-[10px] xs:text-[11px] text-gray-500 text-center">
-              © 2024 GameStop. All rights reserved.
+              © 2024 7even86gamehub.pk All rights reserved.
             </p>
           </div>
         </div>

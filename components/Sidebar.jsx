@@ -27,14 +27,14 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
   const categories = [
     { name: "Gaming Consoles", slug: "gaming-consoles" },
     { name: "Mobile Accessories", slug: "mobile-accessories" },
-    { name: "PlayStation Games", slug: "playStation-games" },
+    { name: "PlayStation Games", slug: "playstation-games" },
     { name: "Gaming Accessories", slug: "gaming-accessories" },
   ];
 
   const handleCategoryClick = (categorySlug) => {
     setShowSidebar(false);
     setShowShopSubmenu(false);
-    router.push(`/all-products?category=${categorySlug}`);
+    router.push(`/all-products/${categorySlug}`);
   };
 
   const handleNavigation = (path) => {

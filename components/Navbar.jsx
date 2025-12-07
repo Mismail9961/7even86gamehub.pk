@@ -34,7 +34,7 @@ const Navbar = () => {
   const categories = [
     { name: "Gaming Consoles", slug: "gaming-consoles" },
     { name: "Mobile Accessories", slug: "mobile-accessories" },
-    { name: "PlayStation Games", slug: "playStation-games" },
+    { name: "PlayStation Games", slug: "playstation-games" },
     { name: "Gaming Accessories", slug: "gaming-accessories" },
   ];
 
@@ -42,7 +42,7 @@ const Navbar = () => {
   const handleCategoryClick = (categorySlug) => {
     setShowCategoriesDropdown(false);
     setShowDropdown(false);
-    router.push(`/all-products?category=${categorySlug}`);
+    router.push(`/all-products/${categorySlug}`);
   };
 
   return (
@@ -93,7 +93,7 @@ const Navbar = () => {
                   onMouseLeave={() => setShowCategoriesDropdown(false)}
                   onClick={() => router.push("/all-products")}
                   className={`flex items-center gap-1 px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive("/all-products")
+                    pathname?.startsWith("/all-products")
                       ? "bg-[#9d0208] text-white"
                       : "text-gray-300 hover:text-white hover:bg-white/5"
                   }`}

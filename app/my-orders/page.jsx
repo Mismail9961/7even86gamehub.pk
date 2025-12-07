@@ -66,7 +66,7 @@ const MyOrders = () => {
         <>
         <TopBar/>
             <Navbar />
-            <div className="min-h-screen bg-black">
+            <div className="min-h-screen bg-[#003049]">
                 <div className="px-3 sm:px-4 md:px-8 lg:px-16 py-4 sm:py-6 md:py-8">
                     
                     {/* Header */}

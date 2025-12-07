@@ -63,7 +63,7 @@ export default function ContactUs() {
   }
 
   return (
-    <div className="bg-black min-h-screen">
+    <div className="bg-[#003049] min-h-screen">
       <TopBar/>
       <Navbar />
 
@@ -155,7 +155,7 @@ export default function ContactUs() {
               <div>
                 <label className="text-sm font-medium text-gray-300">Full name *</label>
                 <input
-                  className={`mt-2 w-full bg-black border px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors ${
+                  className={`mt-2 w-full bg-white border px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors ${
                     errors.name ? "border-red-500" : "border-white/20"
                   }`}
                   placeholder="John Doe"
@@ -170,7 +170,7 @@ export default function ContactUs() {
                 <label className="text-sm font-medium text-gray-300">Email *</label>
                 <input
                   type="email"
-                  className={`mt-2 w-full bg-black border px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors ${
+                  className={`mt-2 w-full bg-white border px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors ${
                     errors.email ? "border-red-500" : "border-white/20"
                   }`}
                   placeholder="john@example.com"
@@ -184,7 +184,7 @@ export default function ContactUs() {
               <div>
                 <label className="text-sm font-medium text-gray-300">Order number (optional)</label>
                 <input
-                  className="mt-2 w-full bg-black border border-white/20 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors"
+                  className="mt-2 w-full bg-white border border-white/20 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors"
                   placeholder="#12345"
                   value={form.orderNumber}
                   onChange={(e) => setForm((s) => ({ ...s, orderNumber: e.target.value }))}
@@ -195,7 +195,7 @@ export default function ContactUs() {
               <div>
                 <label className="text-sm font-medium text-gray-300">Subject *</label>
                 <input
-                  className={`mt-2 w-full bg-black border px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors ${
+                  className={`mt-2 w-full bg-white border px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors ${
                     errors.subject ? "border-red-500" : "border-white/20"
                   }`}
                   placeholder="Order inquiry"
@@ -210,7 +210,7 @@ export default function ContactUs() {
             <div className="mt-4 sm:mt-5">
               <label className="text-sm font-medium text-gray-300">Message *</label>
               <textarea
-                className={`mt-2 w-full bg-black border px-3 sm:px-4 py-2.5 sm:py-3 min-h-[120px] sm:min-h-[140px] text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors resize-none ${
+                className={`mt-2 w-full bg-white border px-3 sm:px-4 py-2.5 sm:py-3 min-h-[120px] sm:min-h-[140px] text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208] transition-colors resize-none ${
                   errors.message ? "border-red-500" : "border-white/20"
                 }`}
                 placeholder="Tell us more about your inquiry..."

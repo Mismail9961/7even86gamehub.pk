@@ -57,7 +57,7 @@ const HomeProducts = () => {
   }
 
   return (
-    <div className="flex flex-col py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-black">
+    <div className="flex flex-col py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-[#003049]">
       {categories.length > 0 ? (
         categories.map((category) => (
           <div key={category} className="mb-12 sm:mb-16 lg:mb-20">

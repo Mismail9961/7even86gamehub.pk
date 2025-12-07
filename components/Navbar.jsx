@@ -50,7 +50,7 @@ const Navbar = () => {
       {/* Sidebar Component */}
       <Sidebar showSidebar={showSidebar} setShowSidebar={setShowSidebar} />
 
-      <nav className="sticky top-0 z-50 bg-black border-b border-[#9d0208]/20">
+      <nav className="sticky top-0 z-50 bg-[#003049] border-b border-[#9d0208]/20">
         <div className="max-w-7xl mx-auto px-2 xs:px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Mobile Menu Button */}

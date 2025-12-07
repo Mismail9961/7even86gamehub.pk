@@ -63,7 +63,7 @@ const Cart = () => {
 
   if (loading) {
     return (
-      <div className="bg-black min-h-screen">
+      <div className="bg-[#003049] min-h-screen">
         <Navbar />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -78,7 +78,7 @@ const Cart = () => {
   const cartItemIds = Object.keys(cartItems).filter(id => cartItems[id] > 0);
 
   return (
-    <div className="bg-black min-h-screen">
+    <div className="bg-[#003049] min-h-screen">
       <TopBar/>
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 min-[375px]:px-6 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16">

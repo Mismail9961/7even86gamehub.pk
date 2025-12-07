@@ -1,29 +1,23 @@
-import { addressDummyData } from "@/assets/assets";
 import { useAppContext } from "@/context/AppContext";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
 const OrderSummary = ({ cartItems = {}, cartProducts = {} }) => {
-
-  const { currency, router, products, loadCart } = useAppContext()
+  const { currency, router, products, loadCart } = useAppContext();
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-
   const [userAddresses, setUserAddresses] = useState([]);
 
   const fetchUserAddresses = async () => {
     try {
       const { data } = await axios.get("/api/get-address", { withCredentials: true });
-  
       if (data.success) {
         setUserAddresses(data.addresses);
         if (data.addresses.length > 0) {
           setSelectedAddress(data.addresses.find(addr => addr.isDefault) || data.addresses[0]);
         }
-      } else {
-        console.error(data.error);
       }
     } catch (err) {
       console.error("Failed to fetch addresses:", err);
@@ -36,105 +30,63 @@ const OrderSummary = ({ cartItems = {}, cartProducts = {} }) => {
   };
 
   const createOrder = async () => {
-    // Validate address is selected
     if (!selectedAddress) {
       toast.error("Please select a delivery address");
       return;
     }
 
-    // Validate user has addresses
     if (userAddresses.length === 0) {
       toast.error("Please add a delivery address first");
-      router.push('/add-address');
+      router.push("/add-address");
       return;
     }
 
-    // Validate cart has items
     const cartItemIds = Object.keys(cartItems || {}).filter(id => cartItems[id] > 0);
     if (cartItemIds.length === 0) {
       toast.error("Your cart is empty");
       return;
     }
 
-    // Validate all products are loaded
-    const missingProducts = cartItemIds.filter(id => !cartProducts[id]);
-    if (missingProducts.length > 0) {
-      toast.error("Some products are still loading. Please wait...");
-      return;
-    }
-
     try {
       setIsPlacingOrder(true);
 
-      // Format items array for API
       const items = cartItemIds.map(itemId => ({
         product: itemId,
-        quantity: cartItems[itemId]
+        quantity: cartItems[itemId],
       }));
 
-      // Get address ID - handle both _id (MongoDB ObjectId) and id (string)
-      const addressId = selectedAddress._id 
-        ? (typeof selectedAddress._id === 'string' ? selectedAddress._id : selectedAddress._id.toString())
-        : selectedAddress.id;
+      const addressId = selectedAddress._id || selectedAddress.id;
 
-      if (!addressId) {
-        toast.error("Invalid address selected");
-        setIsPlacingOrder(false);
-        return;
-      }
-
-      // Call the order creation API
       const response = await axios.post(
-        '/api/order/create',
-        {
-          address: addressId,
-          items: items
-        },
-        {
-          withCredentials: true
-        }
+        "/api/order/create",
+        { address: addressId, items },
+        { withCredentials: true }
       );
 
       if (response.data.success) {
         toast.success("Order placed successfully!");
-        
-        // Clear cart by reloading it (the API already cleared it in the database)
-        if (loadCart) {
-          await loadCart();
-        }
-        
-        // Redirect to orders page
+
+        if (loadCart) await loadCart();
+
         setTimeout(() => {
-          router.push('/my-orders');
+          router.push("/my-orders");
         }, 1500);
       } else {
         toast.error(response.data.message || "Failed to place order");
       }
     } catch (error) {
-      console.error("Error creating order:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Failed to place order";
-      
-      // Handle specific error cases
-      if (error.response?.status === 401) {
-        toast.error("Please login to place an order");
-        router.push('/login');
-      } else if (error.response?.status === 404) {
-        toast.error("Address or product not found. Please refresh and try again.");
-      } else {
-        toast.error(errorMessage);
-      }
+      toast.error("Something went wrong");
     } finally {
       setIsPlacingOrder(false);
     }
-  }
+  };
 
   useEffect(() => {
     fetchUserAddresses();
-  }, [])
+  }, []);
 
   const cartItemIds = Object.keys(cartItems || {}).filter(id => cartItems[id] > 0);
 
-  // Calculate cart totals dynamically
   const calculateCartTotals = () => {
     let totalItems = 0;
     let subtotal = 0;
@@ -142,7 +94,7 @@ const OrderSummary = ({ cartItems = {}, cartProducts = {} }) => {
     cartItemIds.forEach(itemId => {
       const quantity = cartItems[itemId] || 0;
       const product = cartProducts[itemId] || products.find(p => p._id === itemId);
-      
+
       if (product && quantity > 0) {
         totalItems += quantity;
         const price = product.offerPrice || product.price || 0;
@@ -155,95 +107,100 @@ const OrderSummary = ({ cartItems = {}, cartProducts = {} }) => {
 
     return {
       itemCount: totalItems,
-      subtotal: Math.floor(subtotal * 100) / 100,
+      subtotal: Math.floor(subtotal),
       tax,
-      total
+      total,
     };
   };
 
-  const cartTotals = calculateCartTotals();
+  const totals = calculateCartTotals();
 
   return (
-    <div className="w-full md:w-96 bg-gray-500/5 p-5">
-      <h2 className="text-xl md:text-2xl font-medium text-gray-700">
+    <div className="w-full md:w-96 bg-[#003049] border border-white/10 rounded-lg p-4 sm:p-5 text-white">
+      <h2 className="text-lg sm:text-xl font-bold mb-4 text-[#9d0208]">
         Order Summary
       </h2>
-      <hr className="border-gray-500/30 my-5" />
-      <div className="space-y-6">
-        <div>
-          <label className="text-base font-medium uppercase text-gray-600 block mb-2">
-            Select Address
-          </label>
-          <div className="relative inline-block w-full text-sm border">
-            <button
-              className="peer w-full text-left px-4 pr-2 py-2 bg-white text-gray-700 focus:outline-none"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+
+      {/* Address Selector */}
+      <div className="mb-6">
+        <label className="text-sm font-semibold block mb-2 text-gray-300">
+          Select Address
+        </label>
+
+        <div className="relative text-sm">
+          <button
+            className="w-full bg-white/5 border border-white/10 px-3 py-2 rounded text-gray-200 flex justify-between items-center"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            <span>
+              {selectedAddress
+                ? `${selectedAddress.fullName}, ${selectedAddress.city}`
+                : "Choose Address"}
+            </span>
+
+            <svg
+              className={`w-4 h-4 transition-transform ${isDropdownOpen ? "rotate-0" : "-rotate-90"}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <span>
-                {selectedAddress
-                  ? `${selectedAddress.fullName}, ${selectedAddress.area}, ${selectedAddress.city}, ${selectedAddress.state}`
-                  : "Select Address"}
-              </span>
-              <svg className={`w-5 h-5 inline float-right transition-transform duration-200 ${isDropdownOpen ? "rotate-0" : "-rotate-90"}`}
-                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#6B7280"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
-            {isDropdownOpen && (
-              <ul className="absolute w-full bg-white border shadow-md mt-1 z-10 py-1.5">
-                {userAddresses.map((address, index) => (
-                  <li
-                    key={index}
-                    className="px-4 py-2 hover:bg-gray-500/10 cursor-pointer"
-                    onClick={() => handleAddressSelect(address)}
-                  >
-                    {address.fullName}, {address.area}, {address.city}, {address.state}
-                  </li>
-                ))}
+          {isDropdownOpen && (
+            <ul className="absolute w-full bg-black border border-white/10 mt-1 rounded shadow-lg z-20 max-h-40 overflow-y-auto">
+              {userAddresses.map((address, index) => (
                 <li
-                  onClick={() => router.push("/add-address")}
-                  className="px-4 py-2 hover:bg-gray-500/10 cursor-pointer text-center"
+                  key={index}
+                  className="px-3 py-2 hover:bg-white/10 cursor-pointer text-gray-200"
+                  onClick={() => handleAddressSelect(address)}
                 >
-                  + Add New Address
+                  {address.fullName}, {address.city}
                 </li>
-              </ul>
-            )}
-          </div>
-        </div>
-
-
-        <hr className="border-gray-500/30 my-5" />
-
-        <div className="space-y-4">
-          <div className="flex justify-between text-base font-medium">
-            <p className="uppercase text-[#9D0208]">Items {cartTotals.itemCount}</p>
-            <p className="text-white">{currency}{cartTotals.subtotal}</p>
-          </div>
-          <div className="flex justify-between">
-            <p className="text-[#9D0208]">Shipping Fee</p>
-            <p className="font-medium text-white">Free</p>
-          </div>
-          <div className="flex justify-between">
-            <p className="text-[#9D0208]">Tax (2%)</p>
-            <p className="font-medium text-white">{currency}{cartTotals.tax}</p>
-          </div>
-          <div className="flex justify-between text-white text-lg md:text-xl font-medium border-t pt-3">
-            <p>Total</p>
-            <p>{currency}{cartTotals.total}</p>
-          </div>
+              ))}
+              <li
+                onClick={() => router.push("/add-address")}
+                className="px-3 py-2 text-center text-[#9d0208] hover:bg-white/10 cursor-pointer font-semibold"
+              >
+                + Add New Address
+              </li>
+            </ul>
+          )}
         </div>
       </div>
 
-      <button 
-        onClick={createOrder} 
-        disabled={isPlacingOrder || cartItemIds.length === 0}
-        className={`w-full bg-[#22333b] text-white py-3 mt-5 hover:bg-[#9D0208] transition ${
-          isPlacingOrder || cartItemIds.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-        }`}
+      {/* Summary */}
+      <div className="space-y-3 text-sm">
+        <div className="flex justify-between">
+          <p className="text-gray-300">Items ({totals.itemCount})</p>
+          <p>{currency}{totals.subtotal}</p>
+        </div>
+
+        <div className="flex justify-between">
+          <p className="text-gray-300">Shipping</p>
+          <p className="text-green-400 font-semibold">Free</p>
+        </div>
+
+        <div className="flex justify-between">
+          <p className="text-gray-300">Tax (2%)</p>
+          <p>{currency}{totals.tax}</p>
+        </div>
+
+        <div className="flex justify-between pt-3 mt-3 border-t border-white/10 text-lg font-bold">
+          <p>Total</p>
+          <p className="text-[#9d0208]">{currency}{totals.total}</p>
+        </div>
+      </div>
+
+      {/* Button */}
+      <button
+        onClick={createOrder}
+        disabled={isPlacingOrder}
+        className={`w-full py-3 mt-6 rounded text-white font-semibold transition 
+          ${isPlacingOrder ? "bg-[#9d0208]/50 cursor-not-allowed" : "bg-[#9d0208] hover:bg-[#7a0106]"}`}
       >
-        {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+        {isPlacingOrder ? "Placing Order..." : "Place Order"}
       </button>
     </div>
   );

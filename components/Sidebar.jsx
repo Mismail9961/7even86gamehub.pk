@@ -55,7 +55,7 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full w-[280px] xs:w-[300px] bg-gradient-to-b from-[#0d0d0d] to-black z-[70] transform transition-transform duration-300 ease-out shadow-2xl ${
+        className={`fixed top-0 left-0 h-full w-[280px] xs:w-[300px] bg-[#003049] z-[70] transform transition-transform duration-300 ease-out shadow-2xl ${
           showSidebar ? "translate-x-0" : "-translate-x-full"
         }`}
       >

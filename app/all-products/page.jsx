@@ -63,7 +63,7 @@ function ProductsContent() {
     };
 
     return (
-        <div className="min-h-screen bg-black">
+        <div className="min-h-screen bg-[#003049]">
             <div className="max-w-7xl mx-auto px-4 min-[375px]:px-6 sm:px-8 lg:px-12">
                 {/* Header */}
                 <div className="flex items-center justify-between pt-8 sm:pt-12 lg:pt-16 pb-6 sm:pb-8 border-b border-white/10">

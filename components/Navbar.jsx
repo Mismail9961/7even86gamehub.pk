@@ -42,7 +42,7 @@ const Navbar = () => {
   const handleCategoryClick = (categorySlug) => {
     setShowCategoriesDropdown(false);
     setShowDropdown(false);
-    router.push(`/all-products/${categorySlug}`);
+    router.push(`/${categorySlug}`);
   };
 
   return (

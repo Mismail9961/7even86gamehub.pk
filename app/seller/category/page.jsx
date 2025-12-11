@@ -49,7 +49,7 @@ const AdminCategorySeoManager = () => {
       } else {
         setMessage({ type: 'error', text: 'Failed to load categories' });
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to load categories' });
     }
     setLoading(false);
@@ -58,28 +58,26 @@ const AdminCategorySeoManager = () => {
   const saveCategorySeo = async () => {
     setSaving(true);
     setMessage({ type: '', text: '' });
-    
-    try {
-      // Validate required fields
-      if (!formData.categorySlug || !formData.seo.title || !formData.seo.description) {
-        setMessage({ type: 'error', text: 'Please fill all required fields' });
-        setSaving(false);
-        return;
-      }
 
+    if (!formData.categorySlug || !formData.seo.title || !formData.seo.description) {
+      setMessage({ type: 'error', text: 'Please fill all required fields' });
+      setSaving(false);
+      return;
+    }
+
+    try {
       const response = await fetch('/api/seo/category', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setMessage({ type: 'success', text: result.message || 'SEO data saved successfully!' });
         await fetchCategories();
-        
-        // Reset form
+
         setTimeout(() => {
           setSelectedCategory(null);
           resetForm();
@@ -87,9 +85,10 @@ const AdminCategorySeoManager = () => {
       } else {
         setMessage({ type: 'error', text: result.error || 'Failed to save SEO data' });
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to save SEO data' });
     }
+
     setSaving(false);
   };
 
@@ -183,13 +182,12 @@ const AdminCategorySeoManager = () => {
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#001d2e] via-[#003049] to-[#001d2e] p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-black mb-2">Category SEO Manager</h1>
           <p className="text-[#9D0208]">Manage SEO settings for category pages</p>
         </div>
 
-        {/* Message Alert */}
         {message.text && (
           <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
             message.type === 'success' 
@@ -202,12 +200,12 @@ const AdminCategorySeoManager = () => {
         )}
 
         <div className="grid lg:grid-cols-3 gap-6">
+
           {/* Categories List */}
           <div className="lg:col-span-1">
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
               <h2 className="text-xl font-bold text-black mb-4">Categories</h2>
-              
-              {/* Search */}
+
               <div className="relative mb-4">
                 <input
                   type="text"
@@ -219,7 +217,6 @@ const AdminCategorySeoManager = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               </div>
 
-              {/* Add New Category */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-[#9d0208] mb-2">Add New Category</label>
                 <select
@@ -234,7 +231,6 @@ const AdminCategorySeoManager = () => {
                 </select>
               </div>
 
-              {/* Categories List */}
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
@@ -262,9 +258,10 @@ const AdminCategorySeoManager = () => {
             </div>
           </div>
 
-          {/* SEO Form */}
+          {/* SEO FORM */}
           <div className="lg:col-span-2">
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+              
               {formData.categorySlug ? (
                 <>
                   <div className="flex items-center justify-between mb-6">
@@ -275,7 +272,7 @@ const AdminCategorySeoManager = () => {
                   </div>
 
                   <div className="space-y-6">
-                    {/* Basic Info */}
+
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Category Name <span className="text-red-500">*</span>
@@ -289,7 +286,6 @@ const AdminCategorySeoManager = () => {
                       />
                     </div>
 
-                    {/* SEO Title */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         SEO Title <span className="text-red-500">*</span>
@@ -304,7 +300,6 @@ const AdminCategorySeoManager = () => {
                       <p className="text-xs text-gray-500 mt-1">{formData.seo.title.length} characters</p>
                     </div>
 
-                    {/* SEO Description */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         SEO Description <span className="text-red-500">*</span>
@@ -319,7 +314,6 @@ const AdminCategorySeoManager = () => {
                       <p className="text-xs text-gray-500 mt-1">{formData.seo.description.length} characters</p>
                     </div>
 
-                    {/* Keywords */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Keywords (comma separated)
@@ -333,10 +327,10 @@ const AdminCategorySeoManager = () => {
                       />
                     </div>
 
-                    {/* OpenGraph Section */}
+                    {/* OPEN GRAPH */}
                     <div className="border-t border-white/10 pt-6">
                       <h3 className="text-lg font-semibold text-white mb-4">Open Graph (Social Media)</h3>
-                      
+
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">OG Title</label>
@@ -352,9 +346,9 @@ const AdminCategorySeoManager = () => {
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">OG Description</label>
                           <textarea
+                            rows={2}
                             value={formData.seo.openGraph.description}
                             onChange={(e) => handleInputChange('openGraph', e.target.value, true, 'description')}
-                            rows={2}
                             className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
                             placeholder="Get the latest PlayStation, Xbox, and Nintendo consoles"
                           />
@@ -397,7 +391,7 @@ const AdminCategorySeoManager = () => {
                       </div>
                     </div>
 
-                    {/* Active Status */}
+                    {/* ACTIVE TOGGLE */}
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
@@ -406,12 +400,10 @@ const AdminCategorySeoManager = () => {
                         onChange={(e) => handleInputChange('isActive', e.target.checked)}
                         className="w-4 h-4 text-[#9d0208] bg-white/5 border-white/10 rounded focus:ring-[#9d0208]"
                       />
-                      <label htmlFor="isActive" className="text-sm text-gray-300">
-                        Category is active
-                      </label>
+                      <label htmlFor="isActive" className="text-sm text-gray-300">Category is active</label>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* ACTION BUTTONS */}
                     <div className="flex gap-3 pt-4">
                       <button
                         onClick={saveCategorySeo}
@@ -430,7 +422,7 @@ const AdminCategorySeoManager = () => {
                           </>
                         )}
                       </button>
-                      
+
                       <button
                         onClick={() => window.open(`/${formData.categorySlug}`, '_blank')}
                         className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
@@ -440,6 +432,7 @@ const AdminCategorySeoManager = () => {
                       </button>
                     </div>
                   </div>
+
                 </>
               ) : (
                 <div className="text-center py-16">
@@ -450,8 +443,10 @@ const AdminCategorySeoManager = () => {
                   <p className="text-gray-400">Select a category from the list or create a new one</p>
                 </div>
               )}
+
             </div>
           </div>
+
         </div>
       </div>
     </div>

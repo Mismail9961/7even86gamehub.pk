@@ -7,9 +7,9 @@ import { useAppContext } from "@/context/AppContext";
 import TopBar from "@/components/TopBar";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import Loading from "@/components/Loading";
+import CategorySeoSchema from "@/components/CategorySeoSchema";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Head from "next/head";
 
 // Map URL slugs to actual category names
 const categoryMap = {
@@ -32,6 +32,7 @@ const CategoryPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [categorySeo, setCategorySeo] = useState(null);
+    const [seoLoading, setSeoLoading] = useState(true);
     
     // Get the actual category name from the slug
     const categoryName = categoryMap[categorySlug];
@@ -40,82 +41,41 @@ const CategoryPage = () => {
     // Fetch category SEO data
     useEffect(() => {
         const fetchCategorySeo = async () => {
-            if (!categorySlug || categorySlug === 'all-products') return;
+            // Skip for all-products or invalid slugs
+            if (!categorySlug || categorySlug === 'all-products') {
+                setSeoLoading(false);
+                return;
+            }
             
             try {
-                const response = await fetch(`/api/seo/${categorySlug}`);
+                setSeoLoading(true);
+                const response = await fetch(`/api/seo/category/${categorySlug}`);
+                
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success) {
+                    if (data.success && data.data) {
                         setCategorySeo(data.data);
+                        console.log('SEO data loaded:', data.data);
+                    } else {
+                        console.warn('No SEO data found for category:', categorySlug);
                     }
+                } else {
+                    console.error('Failed to fetch SEO:', response.status);
                 }
             } catch (error) {
                 console.error('Error fetching category SEO:', error);
+            } finally {
+                setSeoLoading(false);
             }
         };
 
         fetchCategorySeo();
     }, [categorySlug]);
 
-    // Update document metadata when SEO data is loaded
-    useEffect(() => {
-        if (categorySeo?.seo) {
-            // Update title
-            document.title = categorySeo.seo.title;
-            
-            // Update meta description
-            let metaDescription = document.querySelector('meta[name="description"]');
-            if (!metaDescription) {
-                metaDescription = document.createElement('meta');
-                metaDescription.name = 'description';
-                document.head.appendChild(metaDescription);
-            }
-            metaDescription.content = categorySeo.seo.description;
-            
-            // Update keywords
-            if (categorySeo.seo.keywords?.length > 0) {
-                let metaKeywords = document.querySelector('meta[name="keywords"]');
-                if (!metaKeywords) {
-                    metaKeywords = document.createElement('meta');
-                    metaKeywords.name = 'keywords';
-                    document.head.appendChild(metaKeywords);
-                }
-                metaKeywords.content = categorySeo.seo.keywords.join(', ');
-            }
-            
-            // Update Open Graph tags
-            if (categorySeo.seo.openGraph) {
-                const og = categorySeo.seo.openGraph;
-                
-                updateMetaTag('property', 'og:title', og.title || categorySeo.seo.title);
-                updateMetaTag('property', 'og:description', og.description || categorySeo.seo.description);
-                updateMetaTag('property', 'og:url', og.url || window.location.href);
-                updateMetaTag('property', 'og:site_name', og.siteName || 'Your Store');
-                updateMetaTag('property', 'og:locale', og.locale || 'en_US');
-                updateMetaTag('property', 'og:type', og.type || 'website');
-                
-                if (og.image) {
-                    updateMetaTag('property', 'og:image', og.image);
-                }
-            }
-            
-            // Twitter Card tags
-            updateMetaTag('name', 'twitter:card', 'summary_large_image');
-            updateMetaTag('name', 'twitter:title', categorySeo.seo.title);
-            updateMetaTag('name', 'twitter:description', categorySeo.seo.description);
-            if (categorySeo.seo.openGraph?.image) {
-                updateMetaTag('name', 'twitter:image', categorySeo.seo.openGraph.image);
-            }
-        } else if (isAllProducts) {
-            // Default SEO for All Products page
-            document.title = 'All Products - Your Gaming Store';
-            updateMetaTag('name', 'description', 'Browse our complete collection of gaming products including consoles, games, and accessories.');
-        }
-    }, [categorySeo, isAllProducts]);
-
-    // Helper function to update meta tags
+    // Helper function to update or create meta tags
     const updateMetaTag = (attribute, key, content) => {
+        if (!content) return;
+        
         let element = document.querySelector(`meta[${attribute}="${key}"]`);
         if (!element) {
             element = document.createElement('meta');
@@ -124,6 +84,67 @@ const CategoryPage = () => {
         }
         element.content = content;
     };
+
+    // Update document metadata when SEO data is loaded
+    useEffect(() => {
+        // Wait for SEO to finish loading
+        if (seoLoading) return;
+
+        if (categorySeo?.seo) {
+            const seo = categorySeo.seo;
+            
+            // Update title
+            document.title = seo.title || `${categoryName} | Your Gaming Store`;
+            
+            // Update meta description
+            if (seo.description) {
+                updateMetaTag('name', 'description', seo.description);
+            }
+            
+            // Update keywords
+            if (seo.keywords && seo.keywords.length > 0) {
+                updateMetaTag('name', 'keywords', seo.keywords.join(', '));
+            }
+            
+            // Update Open Graph tags
+            if (seo.openGraph) {
+                const og = seo.openGraph;
+                
+                updateMetaTag('property', 'og:title', og.title || seo.title);
+                updateMetaTag('property', 'og:description', og.description || seo.description);
+                updateMetaTag('property', 'og:url', og.url || window.location.href);
+                updateMetaTag('property', 'og:site_name', og.siteName || 'Your Gaming Store');
+                updateMetaTag('property', 'og:locale', og.locale || 'en_US');
+                updateMetaTag('property', 'og:type', og.type || 'website');
+                
+                if (og.image) {
+                    updateMetaTag('property', 'og:image', og.image);
+                    updateMetaTag('property', 'og:image:alt', seo.title);
+                }
+            }
+            
+            // Update Twitter Card tags
+            updateMetaTag('name', 'twitter:card', 'summary_large_image');
+            updateMetaTag('name', 'twitter:title', seo.title);
+            updateMetaTag('name', 'twitter:description', seo.description);
+            if (seo.openGraph?.image) {
+                updateMetaTag('name', 'twitter:image', seo.openGraph.image);
+            }
+            
+            console.log('SEO metadata applied successfully');
+        } else if (isAllProducts) {
+            // Default SEO for All Products page
+            document.title = 'All Products - Your Gaming Store';
+            updateMetaTag('name', 'description', 'Browse our complete collection of gaming products including consoles, games, and accessories.');
+            updateMetaTag('property', 'og:title', 'All Products - Your Gaming Store');
+            updateMetaTag('property', 'og:description', 'Browse our complete collection of gaming products');
+            updateMetaTag('property', 'og:type', 'website');
+        } else if (!seoLoading) {
+            // Fallback SEO for categories without custom SEO
+            document.title = `${categoryName} | Your Gaming Store`;
+            updateMetaTag('name', 'description', `Shop the best ${categoryName.toLowerCase()} at Your Gaming Store. Quality products with competitive prices.`);
+        }
+    }, [categorySeo, isAllProducts, categoryName, seoLoading]);
 
     // Extract unique categories for sidebar
     const categories = useMemo(() => {
@@ -197,6 +218,14 @@ const CategoryPage = () => {
 
     return (
         <>
+            {/* Add Schema.org structured data */}
+            <CategorySeoSchema 
+                categoryName={categoryName}
+                categorySlug={categorySlug}
+                products={searchedProducts}
+                categorySeo={categorySeo}
+            />
+            
             <TopBar/>
             <Navbar />
             <div className="min-h-screen bg-gradient-to-br from-[#001d2e] via-[#003049] to-[#001d2e]">

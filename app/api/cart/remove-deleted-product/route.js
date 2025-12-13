@@ -1,7 +1,7 @@
 // File: /api/cart/remove-deleted-product/route.js
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/config/db";
-import userModel from "@/lib/models/userModel";
+import connectDB from "@/lib/db";
+import User from "@/models/User";
 
 export async function POST(request) {
   try {
@@ -17,7 +17,7 @@ export async function POST(request) {
     }
 
     // Remove the product from all users' carts
-    const result = await userModel.updateMany(
+    const result = await User.updateMany(
       { "cartData.productId": productId },
       { 
         $pull: { 

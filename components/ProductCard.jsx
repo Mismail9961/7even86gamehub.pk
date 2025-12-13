@@ -11,6 +11,11 @@ const ProductCard = ({ product }) => {
   const productImage = product?.image?.[0] || assets.upload_area;
   const displayPrice = product?.offerPrice || product?.price || 0;
   const hasOffer = product?.offerPrice && product?.price && product.offerPrice < product.price;
+  
+  // Get category name - handles both string and populated object
+  const categoryName = typeof product?.category === 'string' 
+    ? product?.category 
+    : product?.category?.name || 'Uncategorized';
 
   return (
     <div
@@ -37,6 +42,13 @@ const ProductCard = ({ product }) => {
 
       {/* Product Info */}
       <div className="flex flex-col gap-1 min-[375px]:gap-1.5 px-0.5 min-[375px]:px-1">
+        {/* Category Badge */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] min-[375px]:text-xs text-[#9d0208] bg-[#9d0208]/10 px-2 py-0.5 rounded-full font-medium">
+            {categoryName}
+          </span>
+        </div>
+
         {/* Product Name */}
         <p className="text-xs min-[375px]:text-sm sm:text-base font-semibold text-white line-clamp-2 leading-tight min-h-[2.5rem] min-[375px]:min-h-[2.8rem]">
           {product?.name || "Unnamed Product"}

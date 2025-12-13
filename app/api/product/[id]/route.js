@@ -1,5 +1,6 @@
+// File: app/api/product/[id]/route.js
 import connectDB from "@/lib/db";
-import Product from "@/models/Product";
+import Product, { Category } from "@/models/Product";
 import { NextResponse } from "next/server";
 
 export async function GET(req, { params }) {
@@ -15,8 +16,7 @@ export async function GET(req, { params }) {
 
     await connectDB();
 
-    // Try to find by _id (works for both ObjectId and string IDs)
-    const product = await Product.findById(id);
+    const product = await Product.findById(id).lean();
 
     if (!product) {
       return NextResponse.json(
@@ -25,13 +25,28 @@ export async function GET(req, { params }) {
       );
     }
 
+    // Manually fetch the category
+    const categoryId = product.category?.toString() || product.category;
+    const category = await Category.findById(categoryId).lean();
+
+    // Attach category to product
+    const productWithCategory = {
+      ...product,
+      category: category ? {
+        _id: category._id,
+        name: category.name
+      } : {
+        _id: categoryId,
+        name: 'Uncategorized'
+      }
+    };
+
     return NextResponse.json({
       success: true,
-      data: product,
+      data: productWithCategory,
     });
   } catch (error) {
     console.error("Error fetching product:", error);
-    // Handle invalid ObjectId format
     if (error.name === "CastError") {
       return NextResponse.json(
         { success: false, error: "Invalid product ID format" },
@@ -44,4 +59,3 @@ export async function GET(req, { params }) {
     );
   }
 }
-

@@ -35,13 +35,24 @@ const HomeProducts = () => {
     fetchProducts();
   }, []);
 
-  // Group products by category
+  // Group products by category NAME (not the whole category object)
   const groupedProducts = products.reduce((acc, product) => {
-    const category = product.category || "Uncategorized";
-    if (!acc[category]) {
-      acc[category] = [];
+    // Extract category name properly
+    let categoryName = 'Uncategorized';
+    
+    if (product.category) {
+      if (typeof product.category === 'string') {
+        categoryName = product.category;
+        console.warn(`Product ${product._id} has category as string: ${categoryName}`);
+      } else if (typeof product.category === 'object' && product.category.name) {
+        categoryName = product.category.name;
+      }
     }
-    acc[category].push(product);
+    
+    if (!acc[categoryName]) {
+      acc[categoryName] = [];
+    }
+    acc[categoryName].push(product);
     return acc;
   }, {});
 

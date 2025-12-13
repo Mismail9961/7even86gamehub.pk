@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { assets } from "@/assets/assets";
 import Image from "next/image";
 import { useAppContext } from "@/context/AppContext";
@@ -19,13 +19,61 @@ const AddProduct = () => {
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoadingCategories(true);
+      const { data } = await axios.get("/api/category/list");
+      if (data.success) {
+        setCategories(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories");
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) {
+      toast.error("Please enter a category name");
+      return;
+    }
+
+    try {
+      const { data } = await axios.post("/api/category/add", {
+        name: newCategory.trim(),
+      });
+
+      if (data.success) {
+        toast.success(data.message);
+        setNewCategory("");
+        setShowAddCategory(false);
+        await fetchCategories(); // Refresh categories list
+        setCategory(data.data._id); // Auto-select the new category
+      } else {
+        toast.error(data.message || "Failed to add category");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Failed to add category");
+    }
+  };
 
   if (!user || !["seller", "admin"].includes(user.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg font-semibold text-[#9d0208]">
-          Access Denied
-        </p>
+        <p className="text-lg font-semibold text-[#9d0208]">Access Denied</p>
       </div>
     );
   }
@@ -85,7 +133,7 @@ const AddProduct = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to add product");
+      toast.error(error.response?.data?.message || "Failed to add product");
     }
   };
 
@@ -107,6 +155,7 @@ const AddProduct = () => {
                   type="file"
                   id={`image${index}`}
                   hidden
+                  accept="image/*"
                   onChange={(e) => {
                     const updatedFiles = [...files];
                     updatedFiles[index] = e.target.files[0];
@@ -182,12 +231,16 @@ const AddProduct = () => {
               className="outline-none md:py-2.5 py-2 px-3 rounded border bg-black text-white border-[#9d0208]/50 focus:border-[#9d0208] focus:ring-1 focus:ring-[#9d0208]"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
+              required
             >
-              <option value="">Select Category</option>
-              <option value="Gaming Consoles">Gaming Consoles</option>
-              <option value="Mobile Accessories">Mobile Accessories</option>
-              <option value="PlayStation Games">PlayStation Games</option>
-              <option value="Gaming Accessories">Gaming Accessories</option>
+              <option value="">
+                {isLoadingCategories ? "Loading..." : "Select Category"}
+              </option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -203,6 +256,8 @@ const AddProduct = () => {
               type="number"
               id="product-price"
               placeholder="0"
+              min="0"
+              step="0.01"
               className="outline-none md:py-2.5 py-2 px-3 rounded border bg-black text-white border-[#9d0208]/50 focus:border-[#9d0208] focus:ring-1 focus:ring-[#9d0208]"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
@@ -222,6 +277,8 @@ const AddProduct = () => {
               type="number"
               id="offer-price"
               placeholder="0"
+              min="0"
+              step="0.01"
               className="outline-none md:py-2.5 py-2 px-3 rounded border bg-black text-white border-[#9d0208]/50 focus:border-[#9d0208] focus:ring-1 focus:ring-[#9d0208]"
               value={offerPrice}
               onChange={(e) => setOfferPrice(e.target.value)}
@@ -229,7 +286,52 @@ const AddProduct = () => {
           </div>
         </div>
 
-        {/* ADD Button */}
+        {/* Add New Category Button */}
+        <button
+          type="button"
+          onClick={() => setShowAddCategory(!showAddCategory)}
+          className="text-sm text-[#9d0208] hover:underline"
+        >
+          {showAddCategory ? "- Cancel Add Category" : "+ Add New Category"}
+        </button>
+
+        {/* Add Category Form */}
+        {showAddCategory && (
+          <div className="flex items-center gap-3 p-4 border border-[#9d0208]/50 rounded bg-black">
+            <input
+              type="text"
+              placeholder="Category name"
+              className="flex-1 outline-none py-2 px-3 rounded border border-[#9d0208]/50 bg-[#003049] text-white focus:border-[#9d0208] focus:ring-1 focus:ring-[#9d0208]"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddCategory();
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleAddCategory}
+              className="px-4 py-2 bg-[#9d0208] text-white font-semibold rounded hover:bg-black hover:text-[#9d0208] border border-[#9d0208] transition"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddCategory(false);
+                setNewCategory("");
+              }}
+              className="px-4 py-2 bg-black text-white border border-[#9d0208]/50 rounded hover:border-[#9d0208] transition"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* ADD Product Button */}
         <button
           type="submit"
           className="px-8 py-2.5 bg-[#9d0208] text-white font-semibold rounded hover:bg-black hover:text-[#9d0208] border border-[#9d0208] transition"

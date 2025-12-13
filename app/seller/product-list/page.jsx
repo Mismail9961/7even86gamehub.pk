@@ -34,6 +34,16 @@ const ProductList = () => {
       const { data } = await axios.delete(`/api/product/admin/products/${productId}`);
 
       if (data.success) {
+        // Remove product from all user carts
+        try {
+          await axios.post("/api/cart/remove-deleted-product", {
+            productId: productId
+          });
+        } catch (cartError) {
+          console.error("Failed to remove product from carts:", cartError);
+          // Don't block the delete operation if cart cleanup fails
+        }
+
         alert("Product deleted successfully!");
         setProducts((prev) => prev.filter((p) => p._id !== productId));
       } else {

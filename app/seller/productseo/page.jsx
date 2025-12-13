@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Image from "next/image";
 
-export default function ProductSeoManagement() {
+function ProductSeoContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -505,5 +505,17 @@ export default function ProductSeoManagement() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ProductSeoManagement() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-screen bg-[#003049]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9d0208]"></div>
+      </div>
+    }>
+      <ProductSeoContent />
+    </Suspense>
   );
 }

@@ -24,12 +24,18 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Export both models
-const Category =
-  mongoose.models.Category || mongoose.model("Category", categorySchema);
+// Prevent model recompilation in development
+let Category, Product;
 
-const Product =
-  mongoose.models.Product || mongoose.model("Product", productSchema);
+try {
+  // Try to get existing models
+  Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
+  Product = mongoose.models.Product || mongoose.model("Product", productSchema);
+} catch (error) {
+  // If model already exists, use it
+  Category = mongoose.model("Category");
+  Product = mongoose.model("Product");
+}
 
-export { Category };
+export { Category, Product };
 export default Product;

@@ -116,8 +116,7 @@ export default function ContactUs() {
                 </dl>
 
                 <div className="mt-4 xs:mt-5 sm:mt-6 flex flex-wrap gap-3 xs:gap-4 text-xs xs:text-sm">
-                  <a href="/faq" className="text-white hover:text-white/80 transition-colors underline">FAQ</a>
-                  <a href="/returns" className="text-white hover:text-white/80 transition-colors underline">Returns</a>
+                  <a href="/warranty" className="text-white hover:text-white/80 transition-colors underline">Returns</a>
                 </div>
               </div>
             </div>

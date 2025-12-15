@@ -180,48 +180,62 @@ const AdminCategorySeoManager = () => {
   );
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#001d2e] via-[#003049] to-[#001d2e] p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#001d2e] via-[#003049] to-[#001d2e] p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-black mb-2">Category SEO Manager</h1>
-          <p className="text-[#9D0208]">Manage SEO settings for category pages</p>
+        {/* Header */}
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">
+            Category SEO Manager
+          </h1>
+          <p className="text-xs sm:text-sm md:text-base text-[#9D0208]">
+            Manage SEO settings for category pages
+          </p>
         </div>
 
+        {/* Message Alert */}
         {message.text && (
-          <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
+          <div className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg sm:rounded-xl flex items-start sm:items-center gap-2 sm:gap-3 text-sm sm:text-base ${
             message.type === 'success' 
               ? 'bg-green-500/10 border border-green-500/20 text-green-400' 
               : 'bg-red-500/10 border border-red-500/20 text-red-400'
           }`}>
-            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            <span>{message.text}</span>
+            {message.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5 sm:mt-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5 sm:mt-0" />
+            )}
+            <span className="break-words">{message.text}</span>
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
 
           {/* Categories List */}
           <div className="lg:col-span-1">
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-black mb-4">Categories</h2>
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Categories</h2>
 
-              <div className="relative mb-4">
+              {/* Search Input */}
+              <div className="relative mb-3 sm:mb-4">
                 <input
                   type="text"
                   placeholder="Search categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 pl-10 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208]"
+                  className="w-full px-3 sm:px-4 py-2 pl-9 sm:pl-10 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:border-[#9d0208]"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-[#9d0208] mb-2">Add New Category</label>
+              {/* Add New Category */}
+              <div className="mb-3 sm:mb-4">
+                <label className="block text-xs sm:text-sm font-medium text-[#9d0208] mb-2">
+                  Add New Category
+                </label>
                 <select
                   onChange={(e) => e.target.value && createNewCategory(e.target.value)}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-black focus:outline-none focus:border-[#9d0208]"
+                  className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
                   defaultValue=""
                 >
                   <option value="" disabled>Select category...</option>
@@ -231,26 +245,29 @@ const AdminCategorySeoManager = () => {
                 </select>
               </div>
 
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              {/* Categories List */}
+              <div className="space-y-2 max-h-64 sm:max-h-96 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader className="w-6 h-6 text-[#9d0208] animate-spin" />
+                    <Loader className="w-5 h-5 sm:w-6 sm:h-6 text-[#9d0208] animate-spin" />
                   </div>
                 ) : filteredCategories.length === 0 ? (
-                  <p className="text-black text-sm text-center py-8">No categories found</p>
+                  <p className="text-gray-400 text-xs sm:text-sm text-center py-8">
+                    No categories found
+                  </p>
                 ) : (
                   filteredCategories.map((category) => (
                     <button
                       key={category.categorySlug}
                       onClick={() => loadCategoryData(category)}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                      className={`w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all ${
                         selectedCategory?.categorySlug === category.categorySlug
-                          ? 'bg-gradient-to-r from-[#9d0208] to-[#d00000] text-black'
+                          ? 'bg-gradient-to-r from-[#9d0208] to-[#d00000] text-white'
                           : 'bg-white/5 text-gray-300 hover:bg-white/10'
                       }`}
                     >
-                      <div className="font-medium">{category.categoryName}</div>
-                      <div className="text-xs opacity-75 mt-1">{category.categorySlug}</div>
+                      <div className="font-medium text-sm sm:text-base">{category.categoryName}</div>
+                      <div className="text-xs opacity-75 mt-0.5 sm:mt-1 break-all">{category.categorySlug}</div>
                     </button>
                   ))
                 )}
@@ -260,139 +277,166 @@ const AdminCategorySeoManager = () => {
 
           {/* SEO FORM */}
           <div className="lg:col-span-2">
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
               
               {formData.categorySlug ? (
                 <>
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-white">
+                  {/* Form Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-white">
                       {selectedCategory ? 'Edit' : 'New'} SEO Settings
                     </h2>
-                    <span className="text-sm text-gray-400">{formData.categorySlug}</span>
+                    <span className="text-xs sm:text-sm text-gray-400 break-all">
+                      {formData.categorySlug}
+                    </span>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
 
+                    {/* Category Name */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                         Category Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.categoryName}
                         onChange={(e) => handleInputChange('categoryName', e.target.value)}
-                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
+                        className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
                         placeholder="Gaming Consoles"
                       />
                     </div>
 
+                    {/* SEO Title */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                         SEO Title <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={formData.seo.title}
                         onChange={(e) => handleInputChange('title', e.target.value, true)}
-                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
-                        placeholder="Gaming Consoles - PS5, Xbox, Nintendo | Your Store"
+                        className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
+                        placeholder="Gaming Consoles - PS5, Xbox, Nintendo"
                       />
-                      <p className="text-xs text-gray-500 mt-1">{formData.seo.title.length} characters</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.seo.title.length} characters
+                      </p>
                     </div>
 
+                    {/* SEO Description */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                         SEO Description <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={formData.seo.description}
                         onChange={(e) => handleInputChange('description', e.target.value, true)}
                         rows={3}
-                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
+                        className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208] resize-none"
                         placeholder="Shop the latest gaming consoles..."
                       />
-                      <p className="text-xs text-gray-500 mt-1">{formData.seo.description.length} characters</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.seo.description.length} characters
+                      </p>
                     </div>
 
+                    {/* Keywords */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                         Keywords (comma separated)
                       </label>
                       <input
                         type="text"
                         value={formData.seo.keywords.join(', ')}
                         onChange={(e) => handleKeywordsChange(e.target.value)}
-                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
-                        placeholder="gaming consoles, PS5, Xbox Series X"
+                        className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
+                        placeholder="gaming consoles, PS5, Xbox"
                       />
                     </div>
 
-                    {/* OPEN GRAPH */}
-                    <div className="border-t border-white/10 pt-6">
-                      <h3 className="text-lg font-semibold text-white mb-4">Open Graph (Social Media)</h3>
+                    {/* OPEN GRAPH SECTION */}
+                    <div className="border-t border-white/10 pt-4 sm:pt-6">
+                      <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">
+                        Open Graph (Social Media)
+                      </h3>
 
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
+                        {/* OG Title */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">OG Title</label>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
+                            OG Title
+                          </label>
                           <input
                             type="text"
                             value={formData.seo.openGraph.title}
                             onChange={(e) => handleInputChange('openGraph', e.target.value, true, 'title')}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
-                            placeholder="Premium Gaming Consoles Collection"
+                            className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
+                            placeholder="Premium Gaming Consoles"
                           />
                         </div>
 
+                        {/* OG Description */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">OG Description</label>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
+                            OG Description
+                          </label>
                           <textarea
                             rows={2}
                             value={formData.seo.openGraph.description}
                             onChange={(e) => handleInputChange('openGraph', e.target.value, true, 'description')}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
-                            placeholder="Get the latest PlayStation, Xbox, and Nintendo consoles"
+                            className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208] resize-none"
+                            placeholder="Get the latest PlayStation, Xbox..."
                           />
                         </div>
 
-                        <div className="grid sm:grid-cols-2 gap-4">
+                        {/* OG URL and Site Name */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">OG URL</label>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
+                              OG URL
+                            </label>
                             <input
                               type="text"
                               value={formData.seo.openGraph.url}
                               onChange={(e) => handleInputChange('openGraph', e.target.value, true, 'url')}
-                              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
-                              placeholder="https://yoursite.com/gaming-consoles"
+                              className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
+                              placeholder="https://yoursite.com/..."
                             />
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Site Name</label>
+                            <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
+                              Site Name
+                            </label>
                             <input
                               type="text"
                               value={formData.seo.openGraph.siteName}
                               onChange={(e) => handleInputChange('openGraph', e.target.value, true, 'siteName')}
-                              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
+                              className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
                               placeholder="Your Gaming Store"
                             />
                           </div>
                         </div>
 
+                        {/* OG Image */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">OG Image URL</label>
+                          <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
+                            OG Image URL
+                          </label>
                           <input
                             type="text"
                             value={formData.seo.openGraph.image}
                             onChange={(e) => handleInputChange('openGraph', e.target.value, true, 'image')}
-                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9d0208]"
-                            placeholder="https://yoursite.com/images/og-gaming-consoles.jpg"
+                            className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
+                            placeholder="https://yoursite.com/images/og-image.jpg"
                           />
                         </div>
                       </div>
                     </div>
 
                     {/* ACTIVE TOGGLE */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <input
                         type="checkbox"
                         id="isActive"
@@ -400,47 +444,54 @@ const AdminCategorySeoManager = () => {
                         onChange={(e) => handleInputChange('isActive', e.target.checked)}
                         className="w-4 h-4 text-[#9d0208] bg-white/5 border-white/10 rounded focus:ring-[#9d0208]"
                       />
-                      <label htmlFor="isActive" className="text-sm text-gray-300">Category is active</label>
+                      <label htmlFor="isActive" className="text-xs sm:text-sm text-gray-300">
+                        Category is active
+                      </label>
                     </div>
 
                     {/* ACTION BUTTONS */}
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
                       <button
                         onClick={saveCategorySeo}
                         disabled={saving}
-                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#9d0208] to-[#d00000] hover:from-[#7a0106] hover:to-[#9d0208] text-white font-semibold rounded-lg transition-all disabled:opacity-50"
+                        className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-[#9d0208] to-[#d00000] hover:from-[#7a0106] hover:to-[#9d0208] text-white text-sm sm:text-base font-semibold rounded-lg transition-all disabled:opacity-50"
                       >
                         {saving ? (
                           <>
-                            <Loader className="w-5 h-5 animate-spin" />
-                            Saving...
+                            <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                            <span>Saving...</span>
                           </>
                         ) : (
                           <>
-                            <Save className="w-5 h-5" />
-                            Save SEO Settings
+                            <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span>Save SEO Settings</span>
                           </>
                         )}
                       </button>
 
                       <button
                         onClick={() => window.open(`/${formData.categorySlug}`, '_blank')}
-                        className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 text-white text-sm sm:text-base font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
                       >
-                        <Eye className="w-5 h-5" />
-                        Preview
+                        <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span>Preview</span>
                       </button>
                     </div>
                   </div>
 
                 </>
               ) : (
-                <div className="text-center py-16">
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Search className="w-8 h-8 text-gray-600" />
+                // Empty State
+                <div className="text-center py-12 sm:py-16">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                    <Search className="w-6 h-6 sm:w-8 sm:h-8 text-gray-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">No Category Selected</h3>
-                  <p className="text-gray-400">Select a category from the list or create a new one</p>
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
+                    No Category Selected
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-400 px-4">
+                    Select a category from the list or create a new one
+                  </p>
                 </div>
               )}
 

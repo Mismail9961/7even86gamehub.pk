@@ -21,7 +21,6 @@ const ProductList = () => {
   const getCategoryName = (categoryId) => {
     if (!categoryId) return "N/A";
     
-    // Handle MongoDB ObjectId format
     let id;
     if (typeof categoryId === 'object' && categoryId?.$oid) {
       id = categoryId.$oid;
@@ -71,8 +70,6 @@ const ProductList = () => {
 
     try {
       setDeleting(productId);
-      
-      // First remove from carts
       try {
         await axios.post("/api/cart/remove-deleted-product", {
           productId: productId
@@ -81,7 +78,6 @@ const ProductList = () => {
         console.error("Failed to remove product from carts:", cartError);
       }
 
-      // Then delete product
       const { data } = await axios.delete(`/api/product/admin/products/${productId}`);
 
       if (data.success) {
@@ -103,7 +99,7 @@ const ProductList = () => {
     fetchSellerProduct();
   }, []);
 
-  const canDelete = ["admin", "seller"].includes(session?.user?.role);
+  const canEditOrDelete = ["admin", "seller"].includes(session?.user?.role);
 
   if (loading) {
     return (
@@ -143,7 +139,6 @@ const ProductList = () => {
           </div>
         </div>
 
-        {/* No Products */}
         {products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 min-[320px]:py-20 bg-white/5 rounded-xl min-[320px]:rounded-2xl border border-white/10">
             <div className="text-6xl min-[320px]:text-7xl mb-4">📦</div>
@@ -217,35 +212,43 @@ const ProductList = () => {
                         <div className="flex gap-2 justify-center">
                           <button
                             onClick={() => router.push(`/product/${product._id}`)}
-                            className="px-4 py-2 bg-white/5 text-white text-xs rounded-lg hover:bg-white/10 border border-white/10 transition flex items-center gap-1"
+                            className="p-2 bg-white/5 text-white rounded-lg hover:bg-white/10 border border-white/10 transition"
+                            title="View"
                           >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
-                            View
                           </button>
 
-                          {canDelete && (
-                            <button
-                              onClick={() => handleDelete(product._id)}
-                              disabled={deleting === product._id}
-                              className="px-4 py-2 bg-red-900/20 text-red-400 text-xs rounded-lg hover:bg-red-900/30 border border-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1"
-                            >
-                              {deleting === product._id ? (
-                                <>
-                                  <span className="animate-spin">⏳</span>
-                                  Deleting...
-                                </>
-                              ) : (
-                                <>
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {canEditOrDelete && (
+                            <>
+                              {/* UPDATE BUTTON */}
+                              <button
+                                onClick={() => router.push(`/seller/productupdate/${product._id}`)}
+                                className="p-2 bg-blue-900/20 text-blue-400 rounded-lg hover:bg-blue-900/30 border border-blue-900/30 transition"
+                                title="Edit Product"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+
+                              <button
+                                onClick={() => handleDelete(product._id)}
+                                disabled={deleting === product._id}
+                                className="p-2 bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/30 border border-red-900/30 disabled:opacity-50 transition"
+                                title="Delete"
+                              >
+                                {deleting === product._id ? (
+                                  <span className="animate-spin block w-4 h-4">⏳</span>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                   </svg>
-                                  Delete
-                                </>
-                              )}
-                            </button>
+                                )}
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -277,20 +280,13 @@ const ProductList = () => {
                       <h3 className="font-semibold text-white text-sm min-[320px]:text-base line-clamp-2 mb-1 min-[320px]:mb-2">
                         {product.name}
                       </h3>
-
                       <span className="inline-block px-2 py-0.5 text-[10px] min-[320px]:text-xs font-medium bg-[#9d0208]/20 text-[#9d0208] rounded-full border border-[#9d0208]/30 mb-2">
                         {getCategoryName(product.category)}
                       </span>
-
                       <div className="flex items-baseline gap-2">
                         <span className="font-bold text-white text-sm min-[320px]:text-base">
                           PKR {product.offerPrice || product.price}
                         </span>
-                        {product.offerPrice && (
-                          <span className="text-[10px] min-[320px]:text-xs line-through text-gray-500">
-                            PKR {product.price}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -298,19 +294,27 @@ const ProductList = () => {
                   <div className="flex gap-2 min-[320px]:gap-3 mt-3 min-[320px]:mt-4">
                     <button
                       onClick={() => router.push(`/product/${product._id}`)}
-                      className="flex-1 px-3 py-2 min-[320px]:py-2.5 bg-white/5 text-white text-xs min-[320px]:text-sm rounded-lg min-[320px]:rounded-xl hover:bg-white/10 border border-white/10 transition font-medium"
+                      className="flex-1 px-2 py-2 bg-white/5 text-white text-xs rounded-lg border border-white/10 transition font-medium"
                     >
-                      View Product
+                      View
                     </button>
 
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDelete(product._id)}
-                        disabled={deleting === product._id}
-                        className="px-3 min-[320px]:px-4 py-2 min-[320px]:py-2.5 bg-red-900/20 text-red-400 text-xs min-[320px]:text-sm rounded-lg min-[320px]:rounded-xl hover:bg-red-900/30 border border-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
-                      >
-                        {deleting === product._id ? "..." : "Delete"}
-                      </button>
+                    {canEditOrDelete && (
+                      <>
+                        <button
+                          onClick={() => router.push(`/seller/productupdate/${product._id}`)}
+                          className="flex-1 px-2 py-2 bg-blue-900/20 text-blue-400 text-xs rounded-lg border border-blue-900/30 transition font-medium"
+                        >
+                          Update
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product._id)}
+                          disabled={deleting === product._id}
+                          className="flex-1 px-2 py-2 bg-red-900/20 text-red-400 text-xs rounded-lg border border-red-900/30 disabled:opacity-50 transition font-medium"
+                        >
+                          {deleting === product._id ? "..." : "Delete"}
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

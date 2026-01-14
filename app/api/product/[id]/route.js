@@ -59,3 +59,100 @@ export async function GET(req, { params }) {
     );
   }
 }
+
+export async function PUT(req, { params }) {
+  try {
+    const { id } = await params;
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Product ID is required" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const body = await req.json();
+    const { name, description, price, offerPrice, image, category } = body;
+
+    // Validate required fields
+    if (!name || !description || !price) {
+      return NextResponse.json(
+        { success: false, error: "Name, description, and price are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate price
+    if (price <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Price must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
+    // Validate offer price if provided
+    if (offerPrice !== null && offerPrice !== undefined) {
+      if (offerPrice < 0) {
+        return NextResponse.json(
+          { success: false, error: "Offer price cannot be negative" },
+          { status: 400 }
+        );
+      }
+      if (offerPrice >= price) {
+        return NextResponse.json(
+          { success: false, error: "Offer price must be less than regular price" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check if product exists
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return NextResponse.json(
+        { success: false, error: "Product not found" },
+        { status: 404 }
+      );
+    }
+
+    // Update product
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      {
+        name: name.trim(),
+        description: description.trim(),
+        price,
+        offerPrice: offerPrice || null,
+        image: image || existingProduct.image,
+        category: category || existingProduct.category,
+      },
+      { new: true, runValidators: true }
+    ).populate('category', 'name');
+
+    return NextResponse.json({
+      success: true,
+      data: updatedProduct,
+      message: "Product updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    if (error.name === "CastError") {
+      return NextResponse.json(
+        { success: false, error: "Invalid product ID format" },
+        { status: 400 }
+      );
+    }
+    if (error.name === "ValidationError") {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: "Failed to update product" },
+      { status: 500 }
+    );
+  }
+}

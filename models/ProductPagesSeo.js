@@ -1,4 +1,4 @@
-// File: /models/ProductPagesSeo.js
+// File: models/ProductPagesSeo.js
 import mongoose from "mongoose";
 
 const productPagesOpenGraphSchema = new mongoose.Schema(
@@ -69,14 +69,24 @@ const productPagesSeoSchema = new mongoose.Schema(
       youtube: { type: String, default: "" },
       tiktok: { type: String, default: "" },
     },
-    // Changed to String type to accept any user ID format
     updatedBy: {
       type: String,
       default: ""
     }
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    minimize: false
+  }
 );
 
-export default mongoose.models.ProductPagesSeo || 
-  mongoose.model("ProductPagesSeo", productPagesSeoSchema);
+// Prevent model recompilation
+let ProductPagesSeo;
+try {
+  ProductPagesSeo = mongoose.models.ProductPagesSeo || 
+    mongoose.model("ProductPagesSeo", productPagesSeoSchema);
+} catch (error) {
+  ProductPagesSeo = mongoose.model("ProductPagesSeo");
+}
+
+export default ProductPagesSeo;

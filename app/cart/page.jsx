@@ -9,14 +9,17 @@ import { useAppContext } from "@/context/AppContext";
 import axios from "axios";
 import TopBar from "@/components/TopBar";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import toast from "react-hot-toast";
 
 const Cart = () => {
 
-  const { currency, router, cartItems, addToCart, updateCartQuantity, getCartCount } = useAppContext();
+  const { currency, router, cartItems, addToCart, updateCartQuantity, getCartCount, refreshCart } = useAppContext();
   const [cartProducts, setCartProducts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [deletedProducts, setDeletedProducts] = useState([]);
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
-  // Fetch product details for all items in cart
+  // Fetch product details for all items in cart with sync
   useEffect(() => {
     const fetchCartProducts = async () => {
       const productIds = Object.keys(cartItems).filter(id => cartItems[id] > 0);
@@ -32,27 +35,51 @@ const Cart = () => {
           try {
             const res = await axios.get(`/api/product/${id}`);
             if (res.data.success && res.data.data) {
-              return { id, product: res.data.data };
+              return { id, product: res.data.data, exists: true };
             }
-            return null;
+            return { id, product: null, exists: false };
           } catch (error) {
             console.error(`Error fetching product ${id}:`, error);
-            return null;
+            // Product might be deleted
+            if (error.response?.status === 404) {
+              return { id, product: null, exists: false };
+            }
+            return { id, product: null, exists: false };
           }
         });
 
         const results = await Promise.all(productPromises);
         const productsMap = {};
+        const deleted = [];
         
         results.forEach((result) => {
-          if (result) {
+          if (result.exists && result.product) {
             productsMap[result.id] = result.product;
+          } else {
+            deleted.push(result.id);
           }
         });
 
         setCartProducts(productsMap);
+        
+        // Handle deleted products
+        if (deleted.length > 0) {
+          setDeletedProducts(deleted);
+          setShowUpdateNotification(true);
+          
+          // Remove deleted products from cart
+          deleted.forEach(productId => {
+            updateCartQuantity(productId, 0);
+          });
+          
+          toast.error(
+            `${deleted.length} item(s) removed - no longer available`,
+            { duration: 4000 }
+          );
+        }
       } catch (error) {
         console.error('Error fetching cart products:', error);
+        toast.error('Failed to load some cart items');
       } finally {
         setLoading(false);
       }
@@ -61,9 +88,23 @@ const Cart = () => {
     fetchCartProducts();
   }, [cartItems]);
 
+  // Refresh cart data
+  const handleRefreshCart = async () => {
+    setLoading(true);
+    if (refreshCart) {
+      await refreshCart();
+    }
+    // Re-fetch products
+    const productIds = Object.keys(cartItems).filter(id => cartItems[id] > 0);
+    if (productIds.length > 0) {
+      window.location.reload(); // Simple refresh for now
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-[#003049] min-h-screen">
+        <TopBar/>
         <Navbar />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -82,6 +123,31 @@ const Cart = () => {
       <TopBar/>
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 min-[375px]:px-6 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16">
+        {/* Update Notification */}
+        {showUpdateNotification && deletedProducts.length > 0 && (
+          <div className="mb-6 p-4 bg-yellow-900/30 border border-yellow-600/50 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-semibold text-yellow-300">Cart Updated</p>
+                <p className="text-sm text-yellow-200 mt-1">
+                  {deletedProducts.length} item(s) were removed as they are no longer available.
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowUpdateNotification(false)}
+                className="text-yellow-400 hover:text-yellow-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 lg:gap-10">
           <div className="flex-1">
             {/* Header */}
@@ -89,9 +155,20 @@ const Cart = () => {
               <h1 className="text-2xl min-[375px]:text-3xl sm:text-4xl font-bold text-white">
                 Shopping <span className="text-[#9d0208]">Cart</span>
               </h1>
-              <span className="text-base min-[375px]:text-lg sm:text-xl text-gray-400">
-                {getCartCount()} {getCartCount() === 1 ? 'Item' : 'Items'}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleRefreshCart}
+                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                  title="Refresh cart"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+                <span className="text-base min-[375px]:text-lg sm:text-xl text-gray-400">
+                  {getCartCount()} {getCartCount() === 1 ? 'Item' : 'Items'}
+                </span>
+              </div>
             </div>
             
             {cartItemIds.length === 0 ? (
@@ -118,6 +195,8 @@ const Cart = () => {
 
                     const productImage = product.image?.[0] || assets.upload_area;
                     const displayPrice = product.offerPrice || product.price || 0;
+                    const originalPrice = product.price || 0;
+                    const hasDiscount = product.offerPrice && product.offerPrice < originalPrice;
                     const subtotal = displayPrice * cartItems[itemId];
 
                     return (
@@ -141,9 +220,21 @@ const Cart = () => {
                             <h3 className="text-sm min-[375px]:text-base font-semibold text-white truncate mb-1">
                               {product.name || "Unnamed Product"}
                             </h3>
-                            <p className="text-xs min-[375px]:text-sm text-gray-400 mb-3">
-                              {currency}{displayPrice.toFixed(2)} each
-                            </p>
+                            <div className="mb-3">
+                              <p className="text-xs min-[375px]:text-sm text-gray-400">
+                                {currency}{displayPrice.toFixed(2)} each
+                              </p>
+                              {hasDiscount && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs text-gray-500 line-through">
+                                    {currency}{originalPrice.toFixed(2)}
+                                  </span>
+                                  <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">
+                                    {Math.round((1 - displayPrice / originalPrice) * 100)}% OFF
+                                  </span>
+                                </div>
+                              )}
+                            </div>
 
                             {/* Quantity Controls */}
                             <div className="flex items-center justify-between gap-2 mb-3">
@@ -218,6 +309,8 @@ const Cart = () => {
 
                         const productImage = product.image?.[0] || assets.upload_area;
                         const displayPrice = product.offerPrice || product.price || 0;
+                        const originalPrice = product.price || 0;
+                        const hasDiscount = product.offerPrice && product.offerPrice < originalPrice;
                         const subtotal = displayPrice * cartItems[itemId];
 
                         return (
@@ -237,6 +330,11 @@ const Cart = () => {
                                   <p className="text-sm font-medium text-white mb-1">
                                     {product.name || "Unnamed Product"}
                                   </p>
+                                  {product.category?.name && (
+                                    <p className="text-xs text-gray-400 mb-1">
+                                      {product.category.name}
+                                    </p>
+                                  )}
                                   <button
                                     className="text-xs text-red-400 hover:text-red-300 transition-colors"
                                     onClick={() => updateCartQuantity(itemId, 0)}
@@ -246,8 +344,20 @@ const Cart = () => {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-6 text-sm text-gray-300">
-                              {currency}{displayPrice.toFixed(2)}
+                            <td className="py-4 px-6">
+                              <div className="text-sm text-gray-300">
+                                {currency}{displayPrice.toFixed(2)}
+                                {hasDiscount && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-gray-500 line-through">
+                                      {currency}{originalPrice.toFixed(2)}
+                                    </span>
+                                    <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">
+                                      {Math.round((1 - displayPrice / originalPrice) * 100)}% OFF
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3 py-2 w-fit">

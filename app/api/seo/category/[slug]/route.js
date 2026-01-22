@@ -1,22 +1,20 @@
-// app/api/category-seo/[slug]/route.js
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import CategorySeo from '@/models/CategorySeo';
 
-// GET single category SEO by slug (for frontend use)
 export async function GET(request, { params }) {
   try {
     await connectDB();
     
-    // In Next.js 15, params is a Promise, so we need to await it
+    // In Next.js 15, params must be awaited
     const { slug } = await params;
     
-    const category = await CategorySeo.findOne({ 
+    const categorySeoData = await CategorySeo.findOne({ 
       categorySlug: slug,
       isActive: true 
     });
     
-    if (!category) {
+    if (!categorySeoData) {
       return NextResponse.json({
         success: false,
         error: 'Category SEO not found'
@@ -25,7 +23,7 @@ export async function GET(request, { params }) {
     
     return NextResponse.json({
       success: true,
-      data: category
+      data: categorySeoData
     }, { status: 200 });
     
   } catch (error) {

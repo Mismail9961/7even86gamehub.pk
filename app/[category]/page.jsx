@@ -77,15 +77,26 @@ const CategoryPage = () => {
 
   /* ================= FETCH CATEGORY SEO ================= */
   useEffect(() => {
-    if (isAllProducts) return;
+    if (isAllProducts || !category) {
+      setCategorySeo(null);
+      return;
+    }
 
     const fetchSeo = async () => {
       try {
+        // Correct path based on your folder structure
         const res = await fetch(`/api/seo/category/${category}`);
         const data = await res.json();
-        if (data.success) setCategorySeo(data.data);
+        if (data.success) {
+          setCategorySeo(data.data);
+          console.log("✅ SEO Data Loaded:", data.data);
+        } else {
+          setCategorySeo(null);
+          console.log("❌ SEO Data not found for:", category);
+        }
       } catch (err) {
         console.error("SEO fetch failed", err);
+        setCategorySeo(null);
       }
     };
 
@@ -120,17 +131,14 @@ const CategoryPage = () => {
       const matches = productCategoryId === categoryId;
       
       if (matches) {
-        console.log("✅ Product matched:", p.name, "| Category ID:", productCategoryId);
+        // Only log matching if needed for debugging
+        // console.log("✅ Product matched:", p.name, "| Category ID:", productCategoryId);
       }
       
       return matches;
     });
 
     console.log(`🔍 Filtered ${filtered.length} products for category "${categoryName}" (ID: ${categoryId})`);
-    console.log("Sample product categories:", products.slice(0, 3).map(p => ({
-      name: p.name,
-      category: p.category
-    })));
     
     return filtered;
   }, [products, categoryId, isAllProducts, categoryName]);
@@ -239,17 +247,9 @@ const CategoryPage = () => {
             >
               <option value="all-products">All Products ({products.length})</option>
               {categories.map((cat) => {
-                // Count products for this category (handle ObjectId format)
                 const productCount = products.filter(p => {
-                  let productCategoryId;
-                  if (typeof p.category === 'object' && p.category?.$oid) {
-                    productCategoryId = String(p.category.$oid);
-                  } else if (typeof p.category === 'object' && p.category?._id) {
-                    productCategoryId = String(p.category._id);
-                  } else {
-                    productCategoryId = String(p.category);
-                  }
-                  return productCategoryId === cat._id;
+                  let productCategoryId = p.category?.$oid || p.category?._id || p.category;
+                  return String(productCategoryId) === cat._id;
                 }).length;
                 
                 return (
@@ -283,18 +283,9 @@ const CategoryPage = () => {
                 <div className="space-y-1">
                   {categories.map((cat) => {
                     const active = cat.slug === category;
-                    
-                    // Count products for this category (handle ObjectId format)
                     const productCount = products.filter(p => {
-                      let productCategoryId;
-                      if (typeof p.category === 'object' && p.category?.$oid) {
-                        productCategoryId = String(p.category.$oid);
-                      } else if (typeof p.category === 'object' && p.category?._id) {
-                        productCategoryId = String(p.category._id);
-                      } else {
-                        productCategoryId = String(p.category);
-                      }
-                      return productCategoryId === cat._id;
+                      let productCategoryId = p.category?.$oid || p.category?._id || p.category;
+                      return String(productCategoryId) === cat._id;
                     }).length;
 
                     return (

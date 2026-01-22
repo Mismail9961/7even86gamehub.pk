@@ -5,20 +5,20 @@ import { Save, Eye, Search, AlertCircle, CheckCircle, Loader } from 'lucide-reac
 
 const AdminCategorySeoManager = () => {
   const [categories, setCategories] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]); // Categories from backend
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [searchQuery, setSearchQuery] = useState('');
 
-  const categoryOptions = [
-    { slug: 'gaming-consoles', name: 'Gaming Consoles' },
-    { slug: 'mobile-accessories', name: 'Mobile Accessories' },
-    { slug: 'playstation-games', name: 'PlayStation Games' },
-    { slug: 'gaming-accessories', name: 'Gaming Accessories' }
-  ];
+  // Helper function to slugify category names
+  const slugify = (text = "") =>
+    text.toLowerCase().replace(/\s+/g, "-");
 
   const [formData, setFormData] = useState({
+    categoryId: '',
     categorySlug: '',
     categoryName: '',
     seo: {
@@ -38,6 +38,26 @@ const AdminCategorySeoManager = () => {
     isActive: true
   });
 
+  // Fetch available categories from backend
+  const fetchAvailableCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const response = await fetch('/api/category/list');
+      const result = await response.json();
+      
+      if (result.success) {
+        setAvailableCategories(result.data);
+      } else {
+        console.error('Failed to load available categories');
+      }
+    } catch (error) {
+      console.error('Error loading available categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // Fetch existing SEO data for categories
   const fetchCategories = async () => {
     setLoading(true);
     try {
@@ -47,10 +67,10 @@ const AdminCategorySeoManager = () => {
       if (result.success) {
         setCategories(result.data);
       } else {
-        setMessage({ type: 'error', text: 'Failed to load categories' });
+        setMessage({ type: 'error', text: 'Failed to load category SEO data' });
       }
     } catch {
-      setMessage({ type: 'error', text: 'Failed to load categories' });
+      setMessage({ type: 'error', text: 'Failed to load category SEO data' });
     }
     setLoading(false);
   };
@@ -59,11 +79,13 @@ const AdminCategorySeoManager = () => {
     setSaving(true);
     setMessage({ type: '', text: '' });
 
-    if (!formData.categorySlug || !formData.seo.title || !formData.seo.description) {
+    if (!formData.categorySlug || !formData.categoryName || !formData.seo.title || !formData.seo.description) {
       setMessage({ type: 'error', text: 'Please fill all required fields' });
       setSaving(false);
       return;
     }
+    
+    // categoryId is optional - will be auto-populated if missing
 
     try {
       const response = await fetch('/api/seo/category', {
@@ -94,7 +116,17 @@ const AdminCategorySeoManager = () => {
 
   const loadCategoryData = (category) => {
     setSelectedCategory(category);
+    
+    // Handle categoryId - it might be missing in existing records
+    let categoryId = '';
+    if (category.categoryId) {
+      categoryId = typeof category.categoryId === 'object' 
+        ? (category.categoryId._id || category.categoryId.$oid || '')
+        : String(category.categoryId);
+    }
+    
     setFormData({
+      categoryId: categoryId,
       categorySlug: category.categorySlug,
       categoryName: category.categoryName,
       seo: category.seo,
@@ -104,6 +136,7 @@ const AdminCategorySeoManager = () => {
 
   const resetForm = () => {
     setFormData({
+      categoryId: '',
       categorySlug: '',
       categoryName: '',
       seo: {
@@ -146,10 +179,16 @@ const AdminCategorySeoManager = () => {
     handleInputChange('keywords', keywords, true);
   };
 
-  const createNewCategory = (slug) => {
-    const category = categoryOptions.find(c => c.slug === slug);
+  const createNewCategory = (categoryId) => {
+    const category = availableCategories.find(c => String(c._id) === String(categoryId));
+    if (!category) return;
+    
+    const slug = slugify(category.name);
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.7even86gamehub.pk';
+    
     setSelectedCategory(null);
     setFormData({
+      categoryId: String(category._id),
       categorySlug: slug,
       categoryName: category.name,
       seo: {
@@ -159,8 +198,8 @@ const AdminCategorySeoManager = () => {
         openGraph: {
           title: '',
           description: '',
-          url: `https://yoursite.com/${slug}`,
-          siteName: 'Your Gaming Store',
+          url: `${origin}/${slug}`,
+          siteName: '7even86gamehub',
           locale: 'en_US',
           type: 'website',
           image: ''
@@ -171,6 +210,7 @@ const AdminCategorySeoManager = () => {
   };
 
   useEffect(() => {
+    fetchAvailableCategories();
     fetchCategories();
   }, []);
 
@@ -231,18 +271,34 @@ const AdminCategorySeoManager = () => {
               {/* Add New Category */}
               <div className="mb-3 sm:mb-4">
                 <label className="block text-xs sm:text-sm font-medium text-[#9d0208] mb-2">
-                  Add New Category
+                  Add New Category SEO
                 </label>
-                <select
-                  onChange={(e) => e.target.value && createNewCategory(e.target.value)}
-                  className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
-                  defaultValue=""
-                >
-                  <option value="" disabled>Select category...</option>
-                  {categoryOptions.filter(opt => !categories.find(c => c.categorySlug === opt.slug)).map(opt => (
-                    <option key={opt.slug} value={opt.slug}>{opt.name}</option>
-                  ))}
-                </select>
+                {loadingCategories ? (
+                  <div className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-gray-400 text-center">
+                    Loading categories...
+                  </div>
+                ) : (
+                  <select
+                    onChange={(e) => e.target.value && createNewCategory(e.target.value)}
+                    className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm sm:text-base text-white focus:outline-none focus:border-[#9d0208]"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Select category...</option>
+                    {availableCategories
+                      .filter(cat => {
+                        const slug = slugify(cat.name);
+                        return !categories.find(c => {
+                          const existingCategoryId = c.categoryId?._id || c.categoryId?.$oid || c.categoryId;
+                          return c.categorySlug === slug || (existingCategoryId && String(existingCategoryId) === String(cat._id));
+                        });
+                      })
+                      .map(cat => (
+                        <option key={cat._id} value={String(cat._id)}>
+                          {cat.name}
+                        </option>
+                      ))}
+                  </select>
+                )}
               </div>
 
               {/* Categories List */}

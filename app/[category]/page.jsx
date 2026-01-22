@@ -103,6 +103,60 @@ const CategoryPage = () => {
     fetchSeo();
   }, [category, isAllProducts]);
 
+  /* ================= UPDATE PAGE SEO META TAGS ================= */
+  useEffect(() => {
+    if (!categorySeo?.seo) {
+      // Fallback to default title if no SEO data
+      document.title = `${categoryName} | 7even86gamehub`;
+      return;
+    }
+
+    const seo = categorySeo.seo;
+    const og = seo.openGraph || {};
+
+    // Update document title
+    document.title = seo.title || `${categoryName} | 7even86gamehub`;
+
+    // Helper function to update or create meta tags
+    const updateMetaTag = (property, content, isProperty = false) => {
+      if (!content) return;
+      const attribute = isProperty ? 'property' : 'name';
+      let meta = document.querySelector(`meta[${attribute}="${property}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute(attribute, property);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+
+    // Update basic SEO meta tags
+    updateMetaTag('description', seo.description);
+    if (seo.keywords && Array.isArray(seo.keywords) && seo.keywords.length > 0) {
+      updateMetaTag('keywords', seo.keywords.join(', '));
+    }
+
+    // Update Open Graph meta tags
+    updateMetaTag('og:title', og.title || seo.title, true);
+    updateMetaTag('og:description', og.description || seo.description, true);
+    updateMetaTag('og:url', og.url || (typeof window !== 'undefined' ? window.location.href : ''), true);
+    updateMetaTag('og:site_name', og.siteName || '7even86gamehub', true);
+    updateMetaTag('og:locale', og.locale || 'en_US', true);
+    updateMetaTag('og:type', og.type || 'website', true);
+    if (og.image) {
+      updateMetaTag('og:image', og.image, true);
+    }
+
+    // Update Twitter Card meta tags (optional, but good for SEO)
+    updateMetaTag('twitter:card', 'summary_large_image');
+    updateMetaTag('twitter:title', og.title || seo.title);
+    updateMetaTag('twitter:description', og.description || seo.description);
+    if (og.image) {
+      updateMetaTag('twitter:image', og.image);
+    }
+
+  }, [categorySeo, categoryName]);
+
   /* ================= FILTER PRODUCTS BY CATEGORY ID ================= */
   const filteredProducts = useMemo(() => {
     if (isAllProducts) {

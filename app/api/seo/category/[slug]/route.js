@@ -12,7 +12,9 @@ export async function GET(request, { params }) {
     const categorySeoData = await CategorySeo.findOne({ 
       categorySlug: slug,
       isActive: true 
-    });
+    })
+      .populate('categoryId', 'name')
+      .lean(); // Use lean() to handle missing categoryId gracefully
     
     if (!categorySeoData) {
       return NextResponse.json({

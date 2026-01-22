@@ -10,7 +10,10 @@ export async function GET(request) {
   try {
     await connectDB();
     
-    const categories = await CategorySeo.find({}).sort({ categorySlug: 1 });
+    const categories = await CategorySeo.find({})
+      .populate('categoryId', 'name')
+      .sort({ categorySlug: 1 })
+      .lean(); // Use lean() to handle missing categoryId gracefully
     
     return NextResponse.json({
       success: true,
@@ -30,23 +33,46 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
+    const { Category } = await import('@/models/Product');
     
     const body = await request.json();
-    const { categorySlug, categoryName, seo, isActive } = body;
+    let { categoryId, categorySlug, categoryName, seo, isActive } = body;
     
     // Validation
     if (!categorySlug || !categoryName || !seo?.title || !seo?.description) {
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields'
+        error: 'Missing required fields (categorySlug, categoryName, seo.title, seo.description)'
       }, { status: 400 });
     }
     
-    // Check if category already exists
-    const existingCategory = await CategorySeo.findOne({ categorySlug });
+    // If categoryId is not provided, try to find it by categoryName or categorySlug
+    if (!categoryId) {
+      const slugify = (text = "") => text.toLowerCase().replace(/\s+/g, "-");
+      const foundCategory = await Category.findOne({
+        $or: [
+          { name: { $regex: new RegExp(`^${categoryName.trim()}$`, "i") } },
+          { name: { $regex: new RegExp(`^${categorySlug.replace(/-/g, " ")}$`, "i") } }
+        ]
+      });
+      
+      if (foundCategory) {
+        categoryId = foundCategory._id;
+      }
+    }
+    
+    // Check if category already exists by categoryId or categorySlug
+    const existingCategory = await CategorySeo.findOne({ 
+      $or: [
+        ...(categoryId ? [{ categoryId }] : []),
+        { categorySlug }
+      ]
+    });
     
     if (existingCategory) {
       // Update existing
+      if (categoryId) existingCategory.categoryId = categoryId;
+      existingCategory.categorySlug = categorySlug;
       existingCategory.categoryName = categoryName;
       existingCategory.seo = seo;
       existingCategory.isActive = isActive;
@@ -62,6 +88,7 @@ export async function POST(request) {
     } else {
       // Create new
       const newCategory = await CategorySeo.create({
+        ...(categoryId && { categoryId }),
         categorySlug,
         categoryName,
         seo,
@@ -123,43 +150,3 @@ export async function DELETE(request) {
 }
 
 
-// // ============================================
-// // FILE 2: app/api/category-seo/[slug]/route.js
-// // ============================================
-// import { NextResponse } from 'next/server';
-// import connectDB from '@/lib/db';
-// import CategorySeo from '@/models/CategorySeo';
-
-// // GET single category SEO by slug (for frontend use)
-// export async function GET(request, { params }) {
-//   try {
-//     await connectDB();
-    
-//     // In Next.js 15, params is a Promise, so we need to await it
-//     const { slug } = await params;
-    
-//     const category = await CategorySeo.findOne({ 
-//       categorySlug: slug,
-//       isActive: true 
-//     });
-    
-//     if (!category) {
-//       return NextResponse.json({
-//         success: false,
-//         error: 'Category SEO not found'
-//       }, { status: 404 });
-//     }
-    
-//     return NextResponse.json({
-//       success: true,
-//       data: category
-//     }, { status: 200 });
-    
-//   } catch (error) {
-//     console.error('Error fetching category SEO:', error);
-//     return NextResponse.json({
-//       success: false,
-//       error: 'Failed to fetch category SEO data'
-//     }, { status: 500 });
-//   }
-// }

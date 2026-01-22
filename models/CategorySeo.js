@@ -15,17 +15,20 @@ const openGraphSchema = new mongoose.Schema(
 
 const categorySeoSchema = new mongoose.Schema(
   {
+    // Reference to Category model (optional for backward compatibility with existing records)
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: false, // Made optional for existing records
+      unique: true,
+      sparse: true, // Allows multiple null values
+    },
     categorySlug: {
       type: String,
       required: true,
       unique: true, // This ALREADY creates the index.
       trim: true,
-      enum: [
-        "gaming-consoles",
-        "mobile-accessories",
-        "playstation-games",
-        "gaming-accessories",
-      ],
+      // Removed enum - now dynamic based on categories from database
     },
     categoryName: {
       type: String,

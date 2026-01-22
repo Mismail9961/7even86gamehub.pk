@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { assets } from "@/assets/assets";
 import Link from "next/link";
 import { useAppContext } from "@/context/AppContext";
@@ -16,9 +16,42 @@ const Navbar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCategoriesDropdown, setShowCategoriesDropdown] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const canAccessSellerDashboard =
     session?.user?.role === "seller" || session?.user?.role === "admin";
+
+  // Fetch categories from database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await fetch("/api/category/list");
+        const data = await response.json();
+        
+        if (data.success) {
+          setCategories(data.data);
+        } else {
+          console.error("Failed to fetch categories");
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Convert category name to URL slug
+  const convertToSlug = (text) => {
+    return text
+      .toLowerCase()
+      .replace(/[^\w ]+/g, "")
+      .replace(/ +/g, "-");
+  };
 
   const handleSignOut = async () => {
     setShowDropdown(false);
@@ -30,19 +63,20 @@ const Navbar = () => {
 
   const isActive = (path) => pathname === path;
 
-  // Categories list
-  const categories = [
-    { name: "Gaming Consoles", slug: "gaming-consoles" },
-    { name: "Mobile Accessories", slug: "mobile-accessories" },
-    { name: "PlayStation Games", slug: "playstation-games" },
-    { name: "Gaming Accessories", slug: "gaming-accessories" },
-  ];
+  // Check if any category route is active
+  const isCategoryRouteActive = () => {
+    if (pathname === "/all-products") return true;
+    return categories.some(
+      (category) => pathname === `/${convertToSlug(category.name)}`
+    );
+  };
 
   // Handle category click
-  const handleCategoryClick = (categorySlug) => {
+  const handleCategoryClick = (categoryName) => {
     setShowCategoriesDropdown(false);
     setShowDropdown(false);
-    router.push(`/${categorySlug}`);
+    const slug = convertToSlug(categoryName);
+    router.push(`/${slug}`);
   };
 
   return (
@@ -93,11 +127,7 @@ const Navbar = () => {
                   onMouseLeave={() => setShowCategoriesDropdown(false)}
                   onClick={() => router.push("/all-products")}
                   className={`flex items-center gap-1 px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                    pathname?.startsWith("/all-products") || 
-                    pathname === "/gaming-consoles" ||
-                    pathname === "/mobile-accessories" ||
-                    pathname === "/playstation-games" ||
-                    pathname === "/gaming-accessories"
+                    isCategoryRouteActive()
                       ? "bg-[#9d0208] text-white"
                       : "text-gray-300 hover:text-white hover:bg-white/5"
                   }`}
@@ -126,18 +156,30 @@ const Navbar = () => {
                         </svg>
                         All Products
                       </Link>
-                      <div className="border-t border-white/10 my-2"></div>
-                      {categories.map((category) => (
-                        <Link
-                          key={category.slug}
-                          href={`/${category.slug}`}
-                          onClick={() => setShowCategoriesDropdown(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                        >
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#9d0208]"></div>
-                          {category.name}
-                        </Link>
-                      ))}
+                      
+                      {loadingCategories ? (
+                        <div className="px-4 py-3 text-sm text-gray-400">
+                          Loading categories...
+                        </div>
+                      ) : categories.length > 0 ? (
+                        <>
+                          <div className="border-t border-white/10 my-2"></div>
+                          {categories.map((category) => (
+                            <button
+                              key={category._id}
+                              onClick={() => handleCategoryClick(category.name)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white transition-colors w-full text-left"
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-[#9d0208]"></div>
+                              {category.name}
+                            </button>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-400">
+                          No categories available
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

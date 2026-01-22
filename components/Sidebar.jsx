@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -10,9 +10,42 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [showShopSubmenu, setShowShopSubmenu] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const canAccessSellerDashboard =
     session?.user?.role === "seller" || session?.user?.role === "admin";
+
+  // Fetch categories from database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await fetch("/api/category/list");
+        const data = await response.json();
+        
+        if (data.success) {
+          setCategories(data.data);
+        } else {
+          console.error("Failed to fetch categories");
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Convert category name to URL slug
+  const convertToSlug = (text) => {
+    return text
+      .toLowerCase()
+      .replace(/[^\w ]+/g, "")
+      .replace(/ +/g, "-");
+  };
 
   const handleSignOut = async () => {
     setShowSidebar(false);
@@ -24,17 +57,19 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
 
   const isActive = (path) => pathname === path;
 
-  const categories = [
-    { name: "Gaming Consoles", slug: "gaming-consoles" },
-    { name: "Mobile Accessories", slug: "mobile-accessories" },
-    { name: "PlayStation Games", slug: "playstation-games" },
-    { name: "Gaming Accessories", slug: "gaming-accessories" },
-  ];
+  // Check if any category route is active
+  const isCategoryRouteActive = () => {
+    if (pathname === "/all-products") return true;
+    return categories.some(
+      (category) => pathname === `/${convertToSlug(category.name)}`
+    );
+  };
 
-  const handleCategoryClick = (categorySlug) => {
+  const handleCategoryClick = (categoryName) => {
     setShowSidebar(false);
     setShowShopSubmenu(false);
-    router.push(`/${categorySlug}`);
+    const slug = convertToSlug(categoryName);
+    router.push(`/${slug}`);
   };
 
   const handleNavigation = (path) => {
@@ -150,7 +185,7 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
                 <button
                   onClick={() => setShowShopSubmenu(!showShopSubmenu)}
                   className={`w-full flex items-center justify-between px-3 xs:px-4 py-2.5 xs:py-3 rounded-xl text-sm xs:text-[15px] font-medium transition-all duration-200 ${
-                    pathname?.startsWith("/all-products")
+                    isCategoryRouteActive()
                       ? "bg-gradient-to-r from-[#9d0208] to-[#dc2626] text-white shadow-lg shadow-[#9d0208]/30"
                       : "text-gray-300 hover:bg-white/5 hover:text-white"
                   }`}
@@ -180,15 +215,26 @@ const Sidebar = ({ showSidebar, setShowSidebar }) => {
                     >
                       All Products
                     </button>
-                    {categories.map((category) => (
-                      <button
-                        key={category.slug}
-                        onClick={() => handleCategoryClick(category.slug)}
-                        className="w-full text-left px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg text-xs xs:text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
-                      >
-                        {category.name}
-                      </button>
-                    ))}
+                    
+                    {loadingCategories ? (
+                      <div className="px-3 xs:px-4 py-2 text-xs text-gray-500">
+                        Loading...
+                      </div>
+                    ) : categories.length > 0 ? (
+                      categories.map((category) => (
+                        <button
+                          key={category._id}
+                          onClick={() => handleCategoryClick(category.name)}
+                          className="w-full text-left px-3 xs:px-4 py-2 xs:py-2.5 rounded-lg text-xs xs:text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
+                        >
+                          {category.name}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 xs:px-4 py-2 text-xs text-gray-500">
+                        No categories
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

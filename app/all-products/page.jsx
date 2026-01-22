@@ -9,14 +9,6 @@ import TopBar from "@/components/TopBar";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import Link from "next/link";
 
-/* Optional custom slug overrides */
-const slugMap = {
-  "Gaming Consoles": "gaming-consoles",
-  "Mobile Accessories": "mobile-accessories",
-  "PlayStation Games": "playstation-games",
-  "Gaming Accessories": "gaming-accessories",
-};
-
 const AllProducts = () => {
   const { products } = useAppContext();
 
@@ -47,24 +39,42 @@ const AllProducts = () => {
     fetchCategories();
   }, []);
 
+  /* ================= HELPER: GET CATEGORY NAME ================= */
+  const getCategoryName = (category) => {
+    if (typeof category === 'string') return category;
+    if (category && typeof category === 'object' && category.name) return category.name;
+    return '';
+  };
+
+  /* ================= HELPER: CONVERT TO SLUG ================= */
+  const convertToSlug = (text) => {
+    return text
+      .toLowerCase()
+      .replace(/[^\w ]+/g, "")
+      .replace(/ +/g, "-");
+  };
+
   /* ================= FILTER PRODUCTS ================= */
   const filteredProducts = useMemo(() => {
     if (selectedCategories.length === 0) return products;
-    return products.filter((p) =>
-      selectedCategories.includes(p.category)
-    );
+    return products.filter((p) => {
+      const categoryName = getCategoryName(p.category);
+      return selectedCategories.includes(categoryName);
+    });
   }, [products, selectedCategories]);
 
   const searchedProducts = useMemo(() => {
     if (!searchQuery.trim()) return filteredProducts;
 
     const q = searchQuery.toLowerCase();
-    return filteredProducts.filter(
-      (p) =>
+    return filteredProducts.filter((p) => {
+      const categoryName = getCategoryName(p.category);
+      return (
         p.name?.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q) ||
-        p.category?.toLowerCase().includes(q)
-    );
+        categoryName.toLowerCase().includes(q)
+      );
+    });
   }, [filteredProducts, searchQuery]);
 
   /* ================= HELPERS ================= */
@@ -98,9 +108,7 @@ const AllProducts = () => {
     }
 
     return categories.map((category) => {
-      const slug =
-        slugMap[category] ||
-        category.toLowerCase().replace(/\s+/g, "-");
+      const slug = convertToSlug(category);
 
       return (
         <Link
@@ -155,33 +163,71 @@ const AllProducts = () => {
                   {renderCategories()}
                 </div>
 
-                <div className="border-t border-white/10 mt-6 pt-6">
-                  <h4 className="text-sm text-gray-400 mb-3">Filter</h4>
-                  {categories.map((category) => (
-                    <label
-                      key={category}
-                      className="flex items-center gap-3 text-sm text-gray-400 cursor-pointer mb-2"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCategories.includes(category)}
-                        onChange={() => toggleCategory(category)}
-                      />
-                      {category}
-                    </label>
-                  ))}
-                </div>
-
                 {selectedCategories.length > 0 && (
                   <button
                     onClick={clearFilters}
-                    className="mt-4 text-sm text-[#9d0208]"
+                    className="mt-4 text-sm text-[#9d0208] hover:underline"
                   >
                     Clear filters
                   </button>
                 )}
               </div>
             </aside>
+
+            {/* MOBILE FILTER BUTTON */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="lg:hidden fixed bottom-6 right-6 z-40 px-6 py-3 bg-[#9d0208] text-white rounded-full shadow-2xl flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filters
+            </button>
+
+            {/* MOBILE FILTER SIDEBAR */}
+            {showFilters && (
+              <>
+                <div
+                  className="lg:hidden fixed inset-0 bg-black/60 z-40"
+                  onClick={() => setShowFilters(false)}
+                ></div>
+                <div className="lg:hidden fixed right-0 top-0 bottom-0 w-80 bg-[#001d2e] border-l border-white/10 z-50 overflow-y-auto">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-white font-bold text-lg">Filters</h3>
+                      <button
+                        onClick={() => setShowFilters(false)}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="mb-6">
+                      <h4 className="text-white font-semibold mb-3">Categories</h4>
+                      <div className="space-y-1">
+                        {renderCategories(() => setShowFilters(false))}
+                      </div>
+                    </div>
+
+                    {selectedCategories.length > 0 && (
+                      <button
+                        onClick={() => {
+                          clearFilters();
+                          setShowFilters(false);
+                        }}
+                        className="w-full py-2 text-sm text-[#9d0208] hover:underline"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* PRODUCTS GRID */}
             <div className="flex-1">
@@ -205,9 +251,9 @@ const AllProducts = () => {
                         setSearchQuery("");
                         clearFilters();
                       }}
-                      className="px-6 py-3 bg-[#9d0208] text-white rounded-xl"
+                      className="px-6 py-3 bg-[#9d0208] text-white rounded-xl hover:bg-[#7a0106] transition-colors"
                     >
-                      Reset
+                      Reset All
                     </button>
                   )}
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { assets } from "@/assets/assets";
 import Image from "next/image";
 import { useAppContext } from "@/context/AppContext";
@@ -23,6 +23,9 @@ const AddProduct = () => {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  
+  // Refs for file inputs to reset them
+  const fileInputRefs = useRef([]);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -122,12 +125,26 @@ const AddProduct = () => {
 
       if (data.success) {
         toast.success(data.message);
+        
+        // Reset all form fields
         setFiles([]);
         setName("");
         setDescription("");
         setCategory("");
         setPrice("");
         setOfferPrice("");
+        
+        // Reset all file input elements
+        fileInputRefs.current.forEach((ref) => {
+          if (ref) {
+            ref.value = "";
+          }
+        });
+        
+        // Refresh the page after a short delay to ensure form is reset
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
         toast.error(data.message || "Failed to add product");
       }
@@ -154,6 +171,7 @@ const AddProduct = () => {
                 <input
                   type="file"
                   id={`image${index}`}
+                  ref={(el) => (fileInputRefs.current[index] = el)}
                   hidden
                   accept="image/*"
                   onChange={(e) => {

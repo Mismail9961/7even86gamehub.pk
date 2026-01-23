@@ -1,7 +1,7 @@
 import User from "@/models/User";
 import connectDB from "@/lib/db";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import nodemailer from "@/lib/nodemailer";
 
 export async function POST(req) {
   try {

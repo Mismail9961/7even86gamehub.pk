@@ -5,7 +5,7 @@ import Order from "@/models/Order";
 import Product from "@/models/Product";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import nodemailer from "nodemailer";
+import nodemailer from "@/lib/nodemailer";
 
 // Email configuration
 const transporter = nodemailer.createTransport({

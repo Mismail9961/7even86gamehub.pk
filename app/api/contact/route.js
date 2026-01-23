@@ -1,6 +1,6 @@
 // app/api/contact/route.js
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import nodemailer from "@/lib/nodemailer";
 
 export async function POST(request) {
   try {

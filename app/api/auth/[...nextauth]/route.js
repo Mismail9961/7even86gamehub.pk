@@ -172,7 +172,6 @@ const authOptions = {
       },
     },
   },
-  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);

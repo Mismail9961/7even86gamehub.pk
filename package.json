@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "lint": "next lint"
   },
   "dependencies": {
@@ -20,7 +20,7 @@
     "nanoid": "^5.1.6",
     "next": "^15.5.7",
     "next-auth": "^4.24.13",
-    "nodemailer": "^7.0.11",
+    "nodemailer": "^7.0.12",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hot-toast": "^2.6.0"
@@ -29,6 +29,7 @@
     "@eslint/eslintrc": "^3",
     "@types/node": "25.0.6",
     "@types/react": "19.2.8",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",

@@ -1,9 +1,73 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Upload, X, AlertCircle, Check } from 'lucide-react';
+
+const MAX_DIMENSION = 1920;
+const TARGET_MAX_BYTES = 800 * 1024; // 800KB to stay under 1MB body limit
+const INITIAL_QUALITY = 0.82;
+
+/** Compress image in browser so upload stays under body size limit (avoids 413) */
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("File is not an image"));
+      return;
+    }
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
+        if (w > h) {
+          h = Math.round((h * MAX_DIMENSION) / w);
+          w = MAX_DIMENSION;
+        } else {
+          w = Math.round((w * MAX_DIMENSION) / h);
+          h = MAX_DIMENSION;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const tryQuality = (quality) => {
+        return new Promise((res) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                res(null);
+                return;
+              }
+              if (blob.size <= TARGET_MAX_BYTES || quality <= 0.3) {
+                res(blob);
+                return;
+              }
+              tryQuality(Math.max(0.3, quality - 0.15)).then(res);
+            },
+            "image/jpeg",
+            quality
+          );
+        });
+      };
+
+      tryQuality(INITIAL_QUALITY)
+        .then((blob) => (blob ? resolve(blob) : reject(new Error("Compression failed"))))
+        .catch(reject);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load image"));
+    };
+    img.src = url;
+  });
+}
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -15,6 +79,7 @@ export default function EditProductPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
 
   const MAX_IMAGES = 4;
 
@@ -28,6 +93,15 @@ export default function EditProductPage() {
 
   const [newImages, setNewImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -63,7 +137,7 @@ export default function EditProductPage() {
     setError('');
   };
 
-  const processFiles = (files) => {
+  const processFiles = useCallback((files) => {
     const currentTotal = formData.image.length + newImages.length;
     const availableSlots = MAX_IMAGES - currentTotal;
     
@@ -86,9 +160,11 @@ export default function EditProductPage() {
     }
 
     setNewImages(prev => [...prev, ...filesToAdd]);
-    const previews = filesToAdd.map(file => URL.createObjectURL(file));
-    setImagePreviews(prev => [...prev, ...previews]);
-  };
+    
+    // Create previews and clean up old ones
+    const newPreviews = filesToAdd.map(file => URL.createObjectURL(file));
+    setImagePreviews(prev => [...prev, ...newPreviews]);
+  }, [formData.image.length, newImages.length]);
 
   const handleImageChange = (e) => {
     const files = e.target.files;
@@ -125,7 +201,10 @@ export default function EditProductPage() {
   };
 
   const removeNewImage = (index) => {
-    URL.revokeObjectURL(imagePreviews[index]);
+    // Clean up the object URL
+    if (imagePreviews[index]) {
+      URL.revokeObjectURL(imagePreviews[index]);
+    }
     setNewImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
@@ -135,6 +214,7 @@ export default function EditProductPage() {
     setSubmitting(true);
     setError('');
     setSuccess('');
+    setUploadStatus('');
 
     try {
       const totalImages = formData.image.length + newImages.length;
@@ -148,19 +228,35 @@ export default function EditProductPage() {
 
       let imageUrls = [...formData.image];
       
+      // Compress and upload new images
       if (newImages.length > 0) {
-        const base64Images = await Promise.all(
-          newImages.map(file => {
-            return new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(file);
-            });
-          })
-        );
-        imageUrls = [...imageUrls, ...base64Images];
+        setUploadStatus('Compressing images…');
+        
+        for (let i = 0; i < newImages.length; i++) {
+          setUploadStatus(`Compressing image ${i + 1}/${newImages.length}…`);
+          const blob = await compressImageFile(newImages[i]);
+          
+          setUploadStatus(`Uploading image ${i + 1}/${newImages.length}…`);
+          const fd = new FormData();
+          fd.append("image", blob, `image-${i}.jpg`);
+          
+          const uploadResponse = await fetch('/api/product/upload-image', {
+            method: 'POST',
+            body: fd,
+            credentials: 'include',
+          });
+          
+          const uploadData = await uploadResponse.json();
+          
+          if (!uploadData?.success || !uploadData?.url) {
+            throw new Error(uploadData?.message || `Image ${i + 1} upload failed`);
+          }
+          
+          imageUrls.push(uploadData.url);
+        }
       }
+
+      setUploadStatus('Updating product…');
 
       const payload = {
         ...formData,
@@ -178,6 +274,11 @@ export default function EditProductPage() {
       const result = await response.json();
 
       if (result.success) {
+        // Clean up preview URLs
+        imagePreviews.forEach((url) => {
+          if (url) URL.revokeObjectURL(url);
+        });
+        
         setSuccess('Product updated successfully!');
         setTimeout(() => router.push(`/product/${productId}`), 1500);
       } else {
@@ -185,8 +286,12 @@ export default function EditProductPage() {
       }
     } catch (err) {
       setError(err.message);
+      if (err.message.includes('timed out')) {
+        setError('Upload timed out. Try fewer or smaller images.');
+      }
     } finally {
       setSubmitting(false);
+      setUploadStatus('');
     }
   };
 
@@ -207,7 +312,7 @@ export default function EditProductPage() {
   return (
     <div className="min-h-screen py-4 px-3 sm:py-8 sm:px-4">
       <div className="max-w-4xl mx-auto">
-        <div className=" rounded-xl p-4 sm:p-6 md:p-8">
+        <div className="rounded-xl p-4 sm:p-6 md:p-8">
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#9d0208] mb-1 sm:mb-2">Edit Product</h1>
             <p className="text-xs sm:text-sm text-[#9d0208]">Update product information and images</p>
@@ -227,7 +332,7 @@ export default function EditProductPage() {
             </div>
           )}
 
-          <div className="space-y-5 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             <div>
               <label htmlFor="name" className="block text-xs sm:text-sm font-semibold text-[#9d0208] mb-1.5 sm:mb-2">
                 Product Name <span className="text-[#930107]">*</span>
@@ -308,6 +413,7 @@ export default function EditProductPage() {
                   ({totalImages}/{MAX_IMAGES})
                 </span>
               </label>
+              <p className="text-xs text-gray-500 mb-3">Max 15MB per image. Images are resized for faster upload.</p>
 
               {(formData.image.length > 0 || imagePreviews.length > 0) && (
                 <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -426,9 +532,12 @@ export default function EditProductPage() {
             </div>
 
             <div className="flex flex-col gap-3 pt-4 sm:pt-6 border-t border-gray-200">
+              {uploadStatus && (
+                <p className="text-sm text-gray-600 text-center font-medium">{uploadStatus}</p>
+              )}
+              
               <button
-                type="button"
-                onClick={handleSubmit}
+                type="submit"
                 disabled={submitting || totalImages === 0}
                 className="w-full bg-[#930107] text-white py-3 px-4 sm:py-3.5 sm:px-6 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-semibold text-sm sm:text-base shadow-lg disabled:shadow-none flex items-center justify-center gap-2"
               >
@@ -454,7 +563,7 @@ export default function EditProductPage() {
                 Cancel
               </button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

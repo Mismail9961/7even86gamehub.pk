@@ -245,26 +245,27 @@ const AddProduct = () => {
       );
 
       if (data.success) {
-        toast.success(data.message);
-        
         // Clean up preview URLs
         previewUrls.forEach((url) => {
           if (url) URL.revokeObjectURL(url);
         });
         
-        // Reset form
-        setFiles([null, null, null, null]);
-        setPreviewUrls([null, null, null, null]);
-        setName("");
-        setDescription("");
-        setCategory("");
-        setPrice("");
-        setOfferPrice("");
-        fileInputRefs.current.forEach((ref) => {
-          if (ref) ref.value = "";
-        });
+        // Show success message
+        toast.success("Product created successfully!");
         
-        setTimeout(() => window.location.reload(), 500);
+        // Get the product ID from response
+        const productId = data.data?._id || data.productId || data.id;
+        
+        // Navigate to product page after a short delay
+        setTimeout(() => {
+          if (productId) {
+            // Navigate to the specific product page
+            router.push(`/product/${productId}`);
+          } else {
+            // If no product ID, navigate to products list page
+            router.push("/products");
+          }
+        }, 1000);
       } else {
         toast.error(data.message || "Failed to add product");
       }

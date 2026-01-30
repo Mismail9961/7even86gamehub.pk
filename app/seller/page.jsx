@@ -8,6 +8,70 @@ import { useSession } from "next-auth/react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
+const MAX_DIMENSION = 1920;
+const TARGET_MAX_BYTES = 800 * 1024; // 800KB to stay under 1MB body limit
+const INITIAL_QUALITY = 0.82;
+
+/** Compress image in browser so upload stays under body size limit (avoids 413) */
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("File is not an image"));
+      return;
+    }
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
+        if (w > h) {
+          h = Math.round((h * MAX_DIMENSION) / w);
+          w = MAX_DIMENSION;
+        } else {
+          w = Math.round((w * MAX_DIMENSION) / h);
+          h = MAX_DIMENSION;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const tryQuality = (quality) => {
+        return new Promise((res) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                res(null);
+                return;
+              }
+              if (blob.size <= TARGET_MAX_BYTES || quality <= 0.3) {
+                res(blob);
+                return;
+              }
+              tryQuality(Math.max(0.3, quality - 0.15)).then(res);
+            },
+            "image/jpeg",
+            quality
+          );
+        });
+      };
+
+      tryQuality(INITIAL_QUALITY)
+        .then((blob) => (blob ? resolve(blob) : reject(new Error("Compression failed"))))
+        .catch(reject);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load image"));
+    };
+    img.src = url;
+  });
+}
+
 const AddProduct = () => {
   const { router } = useAppContext();
   const { data: session } = useSession();
@@ -24,6 +88,7 @@ const AddProduct = () => {
   const [newCategory, setNewCategory] = useState("");
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
 
   // Refs for file inputs to reset them
   const fileInputRefs = useRef([]);
@@ -112,12 +177,15 @@ const AddProduct = () => {
 
     const validFiles = files.filter((f) => f && f.size > 0);
     setIsSubmitting(true);
+    setUploadStatus("Compressing images…");
     try {
-      // Upload images one-by-one to avoid 413 (request body too large)
       const imageUrls = [];
       for (let i = 0; i < validFiles.length; i++) {
+        setUploadStatus(`Compressing image ${i + 1}/${validFiles.length}…`);
+        const blob = await compressImageFile(validFiles[i]);
+        setUploadStatus(`Uploading image ${i + 1}/${validFiles.length}…`);
         const fd = new FormData();
-        fd.append("image", validFiles[i]);
+        fd.append("image", blob, `image-${i}.jpg`);
         const { data: uploadData } = await axios.post("/api/product/upload-image", fd, {
           withCredentials: true,
           timeout: 60000,
@@ -127,6 +195,7 @@ const AddProduct = () => {
         }
         imageUrls.push(uploadData.url);
       }
+      setUploadStatus("Creating product…");
 
       const { data } = await axios.post(
         "/api/product/add",
@@ -170,6 +239,7 @@ const AddProduct = () => {
       }
     } finally {
       setIsSubmitting(false);
+      setUploadStatus("");
     }
   };
 
@@ -372,13 +442,18 @@ const AddProduct = () => {
         )}
 
         {/* ADD Product Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full sm:w-auto px-6 sm:px-8 py-2.5 bg-[#9d0208] text-white text-sm sm:text-base font-semibold rounded hover:bg-black hover:text-[#9d0208] border border-[#9d0208] transition disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? "Uploading…" : "ADD PRODUCT"}
-        </button>
+        <div className="flex flex-col gap-2">
+          {uploadStatus && (
+            <p className="text-sm text-white/80 text-center">{uploadStatus}</p>
+          )}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full sm:w-auto px-6 sm:px-8 py-2.5 bg-[#9d0208] text-white text-sm sm:text-base font-semibold rounded hover:bg-black hover:text-[#9d0208] border border-[#9d0208] transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Please wait…" : "ADD PRODUCT"}
+          </button>
+        </div>
       </form>
     </div>
   );

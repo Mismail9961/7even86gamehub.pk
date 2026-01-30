@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { assets } from "@/assets/assets";
 import Image from "next/image";
 import { useAppContext } from "@/context/AppContext";
@@ -77,7 +77,8 @@ const AddProduct = () => {
   const { data: session } = useSession();
   const user = session?.user;
 
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState([null, null, null, null]);
+  const [previewUrls, setPreviewUrls] = useState([null, null, null, null]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -92,6 +93,15 @@ const AddProduct = () => {
 
   // Refs for file inputs to reset them
   const fileInputRefs = useRef([]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, []);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -112,6 +122,25 @@ const AddProduct = () => {
       setIsLoadingCategories(false);
     }
   };
+
+  const handleFileChange = useCallback((index, file) => {
+    setFiles((prevFiles) => {
+      const newFiles = [...prevFiles];
+      newFiles[index] = file;
+      return newFiles;
+    });
+
+    setPreviewUrls((prevUrls) => {
+      const newUrls = [...prevUrls];
+      // Revoke old URL to prevent memory leak
+      if (newUrls[index]) {
+        URL.revokeObjectURL(newUrls[index]);
+      }
+      // Create new URL
+      newUrls[index] = file ? URL.createObjectURL(file) : null;
+      return newUrls;
+    });
+  }, []);
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) {
@@ -150,7 +179,9 @@ const AddProduct = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (files.length === 0 || !files[0]) {
+    const validFiles = files.filter((f) => f && f.size > 0);
+
+    if (validFiles.length === 0) {
       toast.error("Please upload at least one product image");
       return;
     }
@@ -175,7 +206,6 @@ const AddProduct = () => {
       return;
     }
 
-    const validFiles = files.filter((f) => f && f.size > 0);
     setIsSubmitting(true);
     setUploadStatus("Compressing images…");
     try {
@@ -216,7 +246,15 @@ const AddProduct = () => {
 
       if (data.success) {
         toast.success(data.message);
-        setFiles([]);
+        
+        // Clean up preview URLs
+        previewUrls.forEach((url) => {
+          if (url) URL.revokeObjectURL(url);
+        });
+        
+        // Reset form
+        setFiles([null, null, null, null]);
+        setPreviewUrls([null, null, null, null]);
         setName("");
         setDescription("");
         setCategory("");
@@ -225,6 +263,7 @@ const AddProduct = () => {
         fileInputRefs.current.forEach((ref) => {
           if (ref) ref.value = "";
         });
+        
         setTimeout(() => window.location.reload(), 500);
       } else {
         toast.error(data.message || "Failed to add product");
@@ -256,7 +295,7 @@ const AddProduct = () => {
           </p>
           <p className="text-xs text-white/70 mb-1">Max 15MB per image. Images are resized for faster upload.</p>
           <div className="grid grid-cols-2 xs:flex xs:flex-wrap items-center gap-2 sm:gap-3">
-            {[...Array(4)].map((_, index) => (
+            {[0, 1, 2, 3].map((index) => (
               <label key={index} htmlFor={`image${index}`} className="block">
                 <input
                   type="file"
@@ -265,17 +304,14 @@ const AddProduct = () => {
                   hidden
                   accept="image/*"
                   onChange={(e) => {
-                    const updatedFiles = [...files];
-                    updatedFiles[index] = e.target.files[0];
-                    setFiles(updatedFiles);
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleFileChange(index, file);
+                    }
                   }}
                 />
                 <Image
-                  src={
-                    files[index]
-                      ? URL.createObjectURL(files[index])
-                      : assets.upload_area
-                  }
+                  src={previewUrls[index] || assets.upload_area}
                   alt={`upload-${index}`}
                   width={80}
                   height={80}

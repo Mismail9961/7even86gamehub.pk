@@ -6,12 +6,32 @@ import Product, { Category } from "@/models/Product";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+import sharp from "sharp";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Allow long uploads (e.g. 4 x 7MB images)
+export const maxDuration = 60;
+
+const MAX_FILE_SIZE_MB = 15;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1920;
+const COMPRESS_QUALITY = 85;
+
+/** Resize and compress image for faster upload and smaller storage */
+async function processImage(buffer) {
+  return sharp(buffer)
+    .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: COMPRESS_QUALITY })
+    .toBuffer();
+}
 
 export async function POST(req) {
   try {
@@ -89,11 +109,21 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    if (!files || files.length === 0) {
+    const validFiles = Array.isArray(files) ? files.filter((f) => f && f.size > 0) : [];
+    if (validFiles.length === 0) {
       return NextResponse.json({ 
         success: false, 
         message: "At least one product image is required" 
       }, { status: 400 });
+    }
+
+    for (const file of validFiles) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        return NextResponse.json({
+          success: false,
+          message: `Image "${file.name || "file"}" is too large. Maximum ${MAX_FILE_SIZE_MB}MB per image. Use smaller images or fewer images.`,
+        }, { status: 400 });
+      }
     }
 
     await connectDB();
@@ -114,19 +144,20 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    // Upload images to Cloudinary
+    // Resize/compress then upload images to Cloudinary
     const uploadResults = await Promise.all(
-      files.map(async (file) => {
+      validFiles.map(async (file) => {
         const buffer = Buffer.from(await file.arrayBuffer());
+        const processed = await processImage(buffer);
         return new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
-            { 
-              resource_type: "auto",
-              folder: "products" // Optional: organize in folders
+            {
+              resource_type: "image",
+              folder: "products",
             },
             (err, result) => (err ? reject(err) : resolve(result))
           );
-          stream.end(buffer);
+          stream.end(processed);
         });
       })
     );

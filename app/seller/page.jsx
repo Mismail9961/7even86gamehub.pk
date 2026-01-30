@@ -23,7 +23,8 @@ const AddProduct = () => {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Refs for file inputs to reset them
   const fileInputRefs = useRef([]);
 
@@ -116,11 +117,14 @@ const AddProduct = () => {
     formData.append("price", price);
     formData.append("offerPrice", offerPrice);
 
-    files.forEach((file) => formData.append("images", file));
+    files.forEach((file) => file && formData.append("images", file));
 
+    setIsSubmitting(true);
     try {
       const { data } = await axios.post("/api/product/add", formData, {
         withCredentials: true,
+        timeout: 120000, // 2 minutes for large image uploads
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (data.success) {
@@ -150,7 +154,14 @@ const AddProduct = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Failed to add product");
+      const msg = error.response?.data?.message || error.message || "Failed to add product";
+      if (error.code === "ECONNABORTED") {
+        toast.error("Upload timed out. Try fewer or smaller images (under 15MB each).");
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -165,6 +176,7 @@ const AddProduct = () => {
           <p className="text-sm sm:text-base font-semibold text-[#9d0208] mb-2">
             Product Image
           </p>
+          <p className="text-xs text-white/70 mb-1">Max 15MB per image. Images are resized for faster upload.</p>
           <div className="grid grid-cols-2 xs:flex xs:flex-wrap items-center gap-2 sm:gap-3">
             {[...Array(4)].map((_, index) => (
               <label key={index} htmlFor={`image${index}`} className="block">
@@ -354,9 +366,10 @@ const AddProduct = () => {
         {/* ADD Product Button */}
         <button
           type="submit"
-          className="w-full sm:w-auto px-6 sm:px-8 py-2.5 bg-[#9d0208] text-white text-sm sm:text-base font-semibold rounded hover:bg-black hover:text-[#9d0208] border border-[#9d0208] transition"
+          disabled={isSubmitting}
+          className="w-full sm:w-auto px-6 sm:px-8 py-2.5 bg-[#9d0208] text-white text-sm sm:text-base font-semibold rounded hover:bg-black hover:text-[#9d0208] border border-[#9d0208] transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          ADD PRODUCT
+          {isSubmitting ? "Uploading…" : "ADD PRODUCT"}
         </button>
       </form>
     </div>

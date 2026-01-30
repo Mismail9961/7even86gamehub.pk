@@ -12,7 +12,13 @@ if (typeof process !== 'undefined' && process.emitWarning) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    experimental: {
+        serverActions: {
+            bodySizeLimit: "50mb",
+        },
+    },
     images: {
+        qualities: [75, 90, 100],
         remotePatterns: [
             {
                 protocol: 'https',

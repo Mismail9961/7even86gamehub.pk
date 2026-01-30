@@ -110,45 +110,53 @@ const AddProduct = () => {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("description", description);
-    formData.append("category", category);
-    formData.append("price", price);
-    formData.append("offerPrice", offerPrice);
-
-    files.forEach((file) => file && formData.append("images", file));
-
+    const validFiles = files.filter((f) => f && f.size > 0);
     setIsSubmitting(true);
     try {
-      const { data } = await axios.post("/api/product/add", formData, {
-        withCredentials: true,
-        timeout: 120000, // 2 minutes for large image uploads
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Upload images one-by-one to avoid 413 (request body too large)
+      const imageUrls = [];
+      for (let i = 0; i < validFiles.length; i++) {
+        const fd = new FormData();
+        fd.append("image", validFiles[i]);
+        const { data: uploadData } = await axios.post("/api/product/upload-image", fd, {
+          withCredentials: true,
+          timeout: 60000,
+        });
+        if (!uploadData?.success || !uploadData?.url) {
+          throw new Error(uploadData?.message || `Image ${i + 1} upload failed`);
+        }
+        imageUrls.push(uploadData.url);
+      }
+
+      const { data } = await axios.post(
+        "/api/product/add",
+        {
+          name,
+          description,
+          category,
+          price,
+          offerPrice: offerPrice || undefined,
+          image: imageUrls,
+        },
+        {
+          withCredentials: true,
+          timeout: 30000,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       if (data.success) {
         toast.success(data.message);
-        
-        // Reset all form fields
         setFiles([]);
         setName("");
         setDescription("");
         setCategory("");
         setPrice("");
         setOfferPrice("");
-        
-        // Reset all file input elements
         fileInputRefs.current.forEach((ref) => {
-          if (ref) {
-            ref.value = "";
-          }
+          if (ref) ref.value = "";
         });
-        
-        // Refresh the page after a short delay to ensure form is reset
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        setTimeout(() => window.location.reload(), 500);
       } else {
         toast.error(data.message || "Failed to add product");
       }

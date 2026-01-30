@@ -16,6 +16,8 @@ const nextConfig = {
         serverActions: {
             bodySizeLimit: "50mb",
         },
+        // Allow larger request bodies (e.g. single image ~7MB) to avoid 413
+        middlewareClientMaxBodySize: "50mb",
     },
     images: {
         qualities: [75, 90, 100],

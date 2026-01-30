@@ -65,13 +65,28 @@ export async function POST(req) {
       );
     }
 
-    const formData = await req.formData();
-    const name = formData.get("name");
-    const description = formData.get("description");
-    const category = formData.get("category");
-    const price = formData.get("price");
-    const offerPrice = formData.get("offerPrice");
-    const files = formData.getAll("images");
+    const contentType = req.headers.get("content-type") || "";
+    let name, description, category, price, offerPrice, imageUrlsFromClient;
+    let validFiles = [];
+
+    if (contentType.includes("application/json")) {
+      const body = await req.json();
+      name = body.name;
+      description = body.description;
+      category = body.category;
+      price = body.price;
+      offerPrice = body.offerPrice;
+      imageUrlsFromClient = Array.isArray(body.image) ? body.image : Array.isArray(body.imageUrls) ? body.imageUrls : [];
+    } else {
+      const formData = await req.formData();
+      name = formData.get("name");
+      description = formData.get("description");
+      category = formData.get("category");
+      price = formData.get("price");
+      offerPrice = formData.get("offerPrice");
+      const files = formData.getAll("images");
+      validFiles = Array.isArray(files) ? files.filter((f) => f && f.size > 0) : [];
+    }
 
     // Validation
     if (!name || !name.trim()) {
@@ -109,8 +124,8 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    const validFiles = Array.isArray(files) ? files.filter((f) => f && f.size > 0) : [];
-    if (validFiles.length === 0) {
+    const hasPreUploadedUrls = imageUrlsFromClient != null && imageUrlsFromClient.length > 0;
+    if (!hasPreUploadedUrls && validFiles.length === 0) {
       return NextResponse.json({ 
         success: false, 
         message: "At least one product image is required" 
@@ -144,25 +159,28 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    // Resize/compress then upload images to Cloudinary
-    const uploadResults = await Promise.all(
-      validFiles.map(async (file) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const processed = await processImage(buffer);
-        return new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            {
-              resource_type: "image",
-              folder: "products",
-            },
-            (err, result) => (err ? reject(err) : resolve(result))
-          );
-          stream.end(processed);
-        });
-      })
-    );
-
-    const imageUrls = uploadResults.map((r) => r.secure_url);
+    let imageUrls;
+    if (hasPreUploadedUrls) {
+      imageUrls = imageUrlsFromClient.filter((u) => typeof u === "string" && u.length > 0);
+      if (imageUrls.length === 0) {
+        return NextResponse.json({ success: false, message: "At least one valid image URL is required" }, { status: 400 });
+      }
+    } else {
+      const uploadResults = await Promise.all(
+        validFiles.map(async (file) => {
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const processed = await processImage(buffer);
+          return new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              { resource_type: "image", folder: "products" },
+              (err, result) => (err ? reject(err) : resolve(result))
+            );
+            stream.end(processed);
+          });
+        })
+      );
+      imageUrls = uploadResults.map((r) => r.secure_url);
+    }
 
     const newProduct = await Product.create({
       userId: session.user.id,

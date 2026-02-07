@@ -15,12 +15,16 @@ const Orders = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [deletingOrderId, setDeletingOrderId] = useState(null);
+    const [updatingOrderId, setUpdatingOrderId] = useState(null);
+
+    // Available status and payment type options
+    const statusOptions = ["Order Placed", "Processing", "Shipped", "Delivered", "Cancelled"];
+    const paymentTypeOptions = ["COD", "Paid", "Pending", "Refunded"];
 
     const fetchOrders = async () => {
         setLoading(true);
         setError(null);
         try {
-            // Use the general orders endpoint that handles role-based access
             const { data } = await axios.get("/api/order/get-orders", { withCredentials: true });
             if (data.success) {
                 setOrders(data.orders || []);
@@ -44,7 +48,6 @@ const Orders = () => {
     };
 
     const handleDeleteOrder = async (orderId) => {
-        // Confirm deletion
         const confirmed = window.confirm("Are you sure you want to delete this order? This action cannot be undone.");
         
         if (!confirmed) return;
@@ -57,7 +60,6 @@ const Orders = () => {
 
             if (data.success) {
                 toast.success("Order deleted successfully");
-                // Remove the deleted order from state
                 setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
             } else {
                 toast.error(data.message || "Failed to delete order");
@@ -73,6 +75,46 @@ const Orders = () => {
             }
         } finally {
             setDeletingOrderId(null);
+        }
+    };
+
+    const handleUpdateOrder = async (orderId, field, value) => {
+        setUpdatingOrderId(orderId);
+        try {
+            const updateData = {
+                orderId,
+                [field]: value
+            };
+
+            const { data } = await axios.put("/api/order/update-status", updateData, {
+                withCredentials: true
+            });
+
+            if (data.success) {
+                toast.success(`Order ${field} updated successfully`);
+                
+                // Update the order in state
+                setOrders(prevOrders => 
+                    prevOrders.map(order => 
+                        order._id === orderId 
+                            ? { ...order, [field]: value }
+                            : order
+                    )
+                );
+            } else {
+                toast.error(data.message || "Failed to update order");
+            }
+        } catch (err) {
+            console.error("Error updating order:", err);
+            if (err.response?.status === 403) {
+                toast.error("You don't have permission to update orders");
+            } else if (err.response?.status === 404) {
+                toast.error("Order not found");
+            } else {
+                toast.error(err.response?.data?.message || "Failed to update order");
+            }
+        } finally {
+            setUpdatingOrderId(null);
         }
     };
 
@@ -146,7 +188,7 @@ const Orders = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="max-w-5xl rounded-md">
+                    <div className="max-w-6xl rounded-md">
 
                         {orders.map((order) => (
                             <div
@@ -211,20 +253,46 @@ const Orders = () => {
                                             Items: {order.totalItems || order.items?.length || 0}
                                         </span>
 
-                                        {/* Status Badge */}
-                                        <span
-                                            className={`text-xs px-2 py-1 rounded inline-block w-fit font-medium ${
-                                                order.status === "Delivered"
-                                                    ? "bg-green-900/40 text-green-300"
-                                                    : order.status === "Cancelled"
-                                                    ? "bg-red-900/40 text-red-300"
-                                                    : order.status === "Shipped"
-                                                    ? "bg-blue-900/40 text-blue-300"
-                                                    : "bg-yellow-900/40 text-yellow-300"
-                                            }`}
-                                        >
-                                            {order.status || "Order Placed"}
-                                        </span>
+                                        {/* Status - Editable for Admin/Seller */}
+                                        {isAdminOrSeller ? (
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs text-gray-400">Order Status:</label>
+                                                <select
+                                                    value={order.status || "Order Placed"}
+                                                    onChange={(e) => handleUpdateOrder(order._id, 'status', e.target.value)}
+                                                    disabled={updatingOrderId === order._id}
+                                                    className={`text-xs px-2 py-1 rounded font-medium bg-[#003049] border cursor-pointer ${
+                                                        order.status === "Delivered"
+                                                            ? "border-green-500 text-green-300"
+                                                            : order.status === "Cancelled"
+                                                            ? "border-red-500 text-red-300"
+                                                            : order.status === "Shipped"
+                                                            ? "border-blue-500 text-blue-300"
+                                                            : "border-yellow-500 text-yellow-300"
+                                                    } ${updatingOrderId === order._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    {statusOptions.map(status => (
+                                                        <option key={status} value={status}>
+                                                            {status}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        ) : (
+                                            <span
+                                                className={`text-xs px-2 py-1 rounded inline-block w-fit font-medium ${
+                                                    order.status === "Delivered"
+                                                        ? "bg-green-900/40 text-green-300"
+                                                        : order.status === "Cancelled"
+                                                        ? "bg-red-900/40 text-red-300"
+                                                        : order.status === "Shipped"
+                                                        ? "bg-blue-900/40 text-blue-300"
+                                                        : "bg-yellow-900/40 text-yellow-300"
+                                                }`}
+                                            >
+                                                {order.status || "Order Placed"}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
@@ -263,7 +331,7 @@ const Orders = () => {
 
                                 {/* Payment Info */}
                                 <div className="text-sm text-gray-300">
-                                    <p className="flex flex-col gap-1">
+                                    <p className="flex flex-col gap-2">
                                         <span className="text-xs">
                                             Method: {order.paymentMethod || order.paymentType || "COD"}
                                         </span>
@@ -271,19 +339,44 @@ const Orders = () => {
                                             Date: {order.date ? new Date(order.date).toLocaleDateString() : "N/A"}
                                         </span>
 
-                                        <span
-                                            className={`text-xs font-medium ${
-                                                order.payment === true || order.paymentType === "Paid"
-                                                    ? "text-green-400"
-                                                    : order.paymentType === "Refunded"
-                                                    ? "text-red-400"
-                                                    : "text-yellow-400"
-                                            }`}
-                                        >
-                                            {order.payment === true || order.paymentType === "Paid" 
-                                                ? "Paid" 
-                                                : order.paymentType || "Pending"}
-                                        </span>
+                                        {/* Payment Type - Editable for Admin/Seller */}
+                                        {isAdminOrSeller ? (
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs text-gray-400">Payment Status:</label>
+                                                <select
+                                                    value={order.paymentType || "Pending"}
+                                                    onChange={(e) => handleUpdateOrder(order._id, 'paymentType', e.target.value)}
+                                                    disabled={updatingOrderId === order._id}
+                                                    className={`text-xs px-2 py-1 rounded font-medium bg-[#003049] border cursor-pointer ${
+                                                        order.paymentType === "Paid"
+                                                            ? "border-green-500 text-green-400"
+                                                            : order.paymentType === "Refunded"
+                                                            ? "border-red-500 text-red-400"
+                                                            : "border-yellow-500 text-yellow-400"
+                                                    } ${updatingOrderId === order._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    {paymentTypeOptions.map(type => (
+                                                        <option key={type} value={type}>
+                                                            {type}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        ) : (
+                                            <span
+                                                className={`text-xs font-medium ${
+                                                    order.payment === true || order.paymentType === "Paid"
+                                                        ? "text-green-400"
+                                                        : order.paymentType === "Refunded"
+                                                        ? "text-red-400"
+                                                        : "text-yellow-400"
+                                                }`}
+                                            >
+                                                {order.payment === true || order.paymentType === "Paid" 
+                                                    ? "Paid" 
+                                                    : order.paymentType || "Pending"}
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                             </div>

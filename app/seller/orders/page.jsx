@@ -87,7 +87,10 @@ const Orders = () => {
             };
 
             const { data } = await axios.put("/api/order/update-status", updateData, {
-                withCredentials: true
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
             });
 
             if (data.success) {
@@ -110,6 +113,9 @@ const Orders = () => {
                 toast.error("You don't have permission to update orders");
             } else if (err.response?.status === 404) {
                 toast.error("Order not found");
+            } else if (err.response?.status === 405) {
+                toast.error("Method not allowed. Please check your API route setup.");
+                console.error("405 Error - Make sure the file is at: app/api/order/update-status/route.js");
             } else {
                 toast.error(err.response?.data?.message || "Failed to update order");
             }
@@ -188,19 +194,19 @@ const Orders = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="max-w-6xl rounded-md">
+                    <div className="space-y-4">
 
                         {orders.map((order) => (
                             <div
                                 key={order._id}
-                                className="flex flex-col md:flex-row gap-5 justify-between p-5 border-t border-[#9d0208]/40 relative"
+                                className="bg-[#002839] rounded-lg p-5 border border-[#9d0208]/40 relative"
                             >
                                 {/* Delete Button (Admin/Seller only) */}
                                 {isAdminOrSeller && (
                                     <button
                                         onClick={() => handleDeleteOrder(order._id)}
                                         disabled={deletingOrderId === order._id}
-                                        className={`absolute top-3 right-3 p-2 rounded-full transition ${
+                                        className={`absolute top-3 right-3 p-2 rounded-full transition z-10 ${
                                             deletingOrderId === order._id
                                                 ? "bg-gray-600 cursor-not-allowed"
                                                 : "bg-red-900/40 hover:bg-red-900/60 text-red-300"
@@ -220,124 +226,125 @@ const Orders = () => {
                                     </button>
                                 )}
 
-                                {/* Order Info */}
-                                <div className="flex-1 flex gap-5 max-w-80">
-                                    <Image
-                                        className="max-w-16 max-h-16 object-cover"
-                                        src={assets.box_icon}
-                                        alt="box_icon"
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
+                                    {/* Order Info */}
+                                    <div className="md:col-span-2 flex gap-5">
+                                        <Image
+                                            className="max-w-16 max-h-16 object-cover"
+                                            src={assets.box_icon}
+                                            alt="box_icon"
+                                        />
 
-                                    <div className="flex flex-col gap-3 text-white">
-                                        <span className="font-medium">
-                                            {order.items && order.items.length > 0 ? (
-                                                order.items.map((item, idx) => {
-                                                    const productName = item.product?.name || "Unknown Product";
-                                                    return (
-                                                        <span key={idx}>
-                                                            {productName} x {item.quantity}
-                                                            {idx < order.items.length - 1 ? ", " : ""}
-                                                        </span>
-                                                    );
-                                                })
-                                            ) : (
-                                                "No items"
-                                            )}
-                                        </span>
-
-                                        <span className="text-xs text-gray-400">
-                                            Order ID: {order._id.slice(-8)}
-                                        </span>
-
-                                        <span className="text-xs text-gray-400">
-                                            Items: {order.totalItems || order.items?.length || 0}
-                                        </span>
-
-                                        {/* Status - Editable for Admin/Seller */}
-                                        {isAdminOrSeller ? (
-                                            <div className="flex flex-col gap-1">
-                                                <label className="text-xs text-gray-400">Order Status:</label>
-                                                <select
-                                                    value={order.status || "Order Placed"}
-                                                    onChange={(e) => handleUpdateOrder(order._id, 'status', e.target.value)}
-                                                    disabled={updatingOrderId === order._id}
-                                                    className={`text-xs px-2 py-1 rounded font-medium bg-[#003049] border cursor-pointer ${
-                                                        order.status === "Delivered"
-                                                            ? "border-green-500 text-green-300"
-                                                            : order.status === "Cancelled"
-                                                            ? "border-red-500 text-red-300"
-                                                            : order.status === "Shipped"
-                                                            ? "border-blue-500 text-blue-300"
-                                                            : "border-yellow-500 text-yellow-300"
-                                                    } ${updatingOrderId === order._id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    {statusOptions.map(status => (
-                                                        <option key={status} value={status}>
-                                                            {status}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        ) : (
-                                            <span
-                                                className={`text-xs px-2 py-1 rounded inline-block w-fit font-medium ${
-                                                    order.status === "Delivered"
-                                                        ? "bg-green-900/40 text-green-300"
-                                                        : order.status === "Cancelled"
-                                                        ? "bg-red-900/40 text-red-300"
-                                                        : order.status === "Shipped"
-                                                        ? "bg-blue-900/40 text-blue-300"
-                                                        : "bg-yellow-900/40 text-yellow-300"
-                                                }`}
-                                            >
-                                                {order.status || "Order Placed"}
+                                        <div className="flex flex-col gap-2 text-white">
+                                            <span className="font-medium text-sm">
+                                                {order.items && order.items.length > 0 ? (
+                                                    order.items.map((item, idx) => {
+                                                        const productName = item.product?.name || "Unknown Product";
+                                                        return (
+                                                            <span key={idx}>
+                                                                {productName} x {item.quantity}
+                                                                {idx < order.items.length - 1 ? ", " : ""}
+                                                            </span>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    "No items"
+                                                )}
                                             </span>
-                                        )}
-                                    </div>
-                                </div>
 
-                                {/* Customer Info (for admin/seller) */}
-                                {isAdminOrSeller && (
+                                            <span className="text-xs text-gray-400">
+                                                Order ID: {order._id.slice(-8)}
+                                            </span>
+
+                                            <span className="text-xs text-gray-400">
+                                                Items: {order.totalItems || order.items?.length || 0}
+                                            </span>
+
+                                            {/* Status - Editable for Admin/Seller */}
+                                            {isAdminOrSeller ? (
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-xs text-gray-400">Order Status:</label>
+                                                    <select
+                                                        value={order.status || "Order Placed"}
+                                                        onChange={(e) => handleUpdateOrder(order._id, 'status', e.target.value)}
+                                                        disabled={updatingOrderId === order._id}
+                                                        className={`text-xs px-2 py-1.5 rounded font-medium bg-[#003049] border cursor-pointer ${
+                                                            order.status === "Delivered"
+                                                                ? "border-green-500 text-green-300"
+                                                                : order.status === "Cancelled"
+                                                                ? "border-red-500 text-red-300"
+                                                                : order.status === "Shipped"
+                                                                ? "border-blue-500 text-blue-300"
+                                                                : "border-yellow-500 text-yellow-300"
+                                                        } ${updatingOrderId === order._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        {statusOptions.map(status => (
+                                                            <option key={status} value={status}>
+                                                                {status}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <span
+                                                    className={`text-xs px-2 py-1 rounded inline-block w-fit font-medium ${
+                                                        order.status === "Delivered"
+                                                            ? "bg-green-900/40 text-green-300"
+                                                            : order.status === "Cancelled"
+                                                            ? "bg-red-900/40 text-red-300"
+                                                            : order.status === "Shipped"
+                                                            ? "bg-blue-900/40 text-blue-300"
+                                                            : "bg-yellow-900/40 text-yellow-300"
+                                                    }`}
+                                                >
+                                                    {order.status || "Order Placed"}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Customer Info (for admin/seller) */}
+                                    {isAdminOrSeller && (
+                                        <div className="text-gray-300 text-sm">
+                                            <p className="font-medium text-white mb-1 text-xs">Customer</p>
+                                            <p className="text-xs">
+                                                {order.address?.fullName || "N/A"}
+                                                <br />
+                                                {order.address?.phoneNumber || ""}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Address */}
                                     <div className="text-gray-300 text-sm">
-                                        <p className="font-medium text-white mb-1">Customer</p>
+                                        <p className="font-medium text-white mb-1 text-xs">Delivery Address</p>
                                         <p className="text-xs">
-                                            {order.address?.fullName || "N/A"}
+                                            {order.address?.area || ""}
                                             <br />
-                                            {order.address?.phoneNumber || ""}
+                                            {`${order.address?.city || ""}, ${order.address?.state || ""}`}
+                                            <br />
+                                            {order.address?.pinCode || order.address?.zipCode || ""}
                                         </p>
                                     </div>
-                                )}
 
-                                {/* Address */}
-                                <div className="text-gray-300 text-sm">
-                                    <p className="font-medium text-white mb-1">Delivery Address</p>
-                                    <p className="text-xs">
-                                        {order.address?.area || ""}
-                                        <br />
-                                        {`${order.address?.city || ""}, ${order.address?.state || ""}`}
-                                        <br />
-                                        {order.address?.pinCode || order.address?.zipCode || ""}
-                                    </p>
-                                </div>
+                                    {/* Payment & Amount */}
+                                    <div className="text-sm text-gray-300 space-y-2">
+                                        <div>
+                                            <p className="font-medium text-white text-xs mb-1">Amount</p>
+                                            <p className="font-medium text-white">
+                                                {currency}
+                                                {order.amount?.toFixed(2) || "0.00"}
+                                            </p>
+                                        </div>
 
-                                {/* Amount */}
-                                <div className="flex flex-col items-end">
-                                    <p className="font-medium text-white">
-                                        {currency}
-                                        {order.amount?.toFixed(2) || "0.00"}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">Total Amount</p>
-                                </div>
-
-                                {/* Payment Info */}
-                                <div className="text-sm text-gray-300">
-                                    <p className="flex flex-col gap-2">
-                                        <span className="text-xs">
-                                            Method: {order.paymentMethod || order.paymentType || "COD"}
-                                        </span>
-                                        <span className="text-xs">
-                                            Date: {order.date ? new Date(order.date).toLocaleDateString() : "N/A"}
-                                        </span>
+                                        <div>
+                                            <p className="text-xs">
+                                                Method: {order.paymentMethod || order.paymentType || "COD"}
+                                            </p>
+                                            <p className="text-xs">
+                                                Date: {order.date ? new Date(order.date).toLocaleDateString() : "N/A"}
+                                            </p>
+                                        </div>
 
                                         {/* Payment Type - Editable for Admin/Seller */}
                                         {isAdminOrSeller ? (
@@ -347,7 +354,7 @@ const Orders = () => {
                                                     value={order.paymentType || "Pending"}
                                                     onChange={(e) => handleUpdateOrder(order._id, 'paymentType', e.target.value)}
                                                     disabled={updatingOrderId === order._id}
-                                                    className={`text-xs px-2 py-1 rounded font-medium bg-[#003049] border cursor-pointer ${
+                                                    className={`text-xs px-2 py-1.5 rounded font-medium bg-[#003049] border cursor-pointer ${
                                                         order.paymentType === "Paid"
                                                             ? "border-green-500 text-green-400"
                                                             : order.paymentType === "Refunded"
@@ -377,7 +384,7 @@ const Orders = () => {
                                                     : order.paymentType || "Pending"}
                                             </span>
                                         )}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         ))}

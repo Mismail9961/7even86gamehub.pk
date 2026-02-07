@@ -14,6 +14,7 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [deletingOrderId, setDeletingOrderId] = useState(null);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -42,11 +43,47 @@ const Orders = () => {
         }
     };
 
+    const handleDeleteOrder = async (orderId) => {
+        // Confirm deletion
+        const confirmed = window.confirm("Are you sure you want to delete this order? This action cannot be undone.");
+        
+        if (!confirmed) return;
+
+        setDeletingOrderId(orderId);
+        try {
+            const { data } = await axios.delete(`/api/order/delete?orderId=${orderId}`, {
+                withCredentials: true
+            });
+
+            if (data.success) {
+                toast.success("Order deleted successfully");
+                // Remove the deleted order from state
+                setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
+            } else {
+                toast.error(data.message || "Failed to delete order");
+            }
+        } catch (err) {
+            console.error("Error deleting order:", err);
+            if (err.response?.status === 403) {
+                toast.error("You don't have permission to delete orders");
+            } else if (err.response?.status === 404) {
+                toast.error("Order not found");
+            } else {
+                toast.error(err.response?.data?.message || "Failed to delete order");
+            }
+        } finally {
+            setDeletingOrderId(null);
+        }
+    };
+
     useEffect(() => {
         if (session?.user) {
             fetchOrders();
         }
     }, [session]);
+
+    // Check if user is admin or seller
+    const isAdminOrSeller = session?.user?.role === "admin" || session?.user?.role === "seller";
 
     if (loading) {
         return (
@@ -103,7 +140,7 @@ const Orders = () => {
                     <div className="flex flex-col items-center justify-center py-20">
                         <p className="text-xl text-gray-400 mb-4">No orders found</p>
                         <p className="text-sm text-gray-500">
-                            {session?.user?.role === "admin" || session?.user?.role === "seller" 
+                            {isAdminOrSeller 
                                 ? "All orders will appear here" 
                                 : "Your orders will appear here"}
                         </p>
@@ -114,8 +151,33 @@ const Orders = () => {
                         {orders.map((order) => (
                             <div
                                 key={order._id}
-                                className="flex flex-col md:flex-row gap-5 justify-between p-5 border-t border-[#9d0208]/40"
+                                className="flex flex-col md:flex-row gap-5 justify-between p-5 border-t border-[#9d0208]/40 relative"
                             >
+                                {/* Delete Button (Admin/Seller only) */}
+                                {isAdminOrSeller && (
+                                    <button
+                                        onClick={() => handleDeleteOrder(order._id)}
+                                        disabled={deletingOrderId === order._id}
+                                        className={`absolute top-3 right-3 p-2 rounded-full transition ${
+                                            deletingOrderId === order._id
+                                                ? "bg-gray-600 cursor-not-allowed"
+                                                : "bg-red-900/40 hover:bg-red-900/60 text-red-300"
+                                        }`}
+                                        title="Delete Order"
+                                    >
+                                        {deletingOrderId === order._id ? (
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                )}
+
                                 {/* Order Info */}
                                 <div className="flex-1 flex gap-5 max-w-80">
                                     <Image
@@ -167,7 +229,7 @@ const Orders = () => {
                                 </div>
 
                                 {/* Customer Info (for admin/seller) */}
-                                {(session?.user?.role === "admin" || session?.user?.role === "seller") && (
+                                {isAdminOrSeller && (
                                     <div className="text-gray-300 text-sm">
                                         <p className="font-medium text-white mb-1">Customer</p>
                                         <p className="text-xs">
@@ -186,7 +248,7 @@ const Orders = () => {
                                         <br />
                                         {`${order.address?.city || ""}, ${order.address?.state || ""}`}
                                         <br />
-                                        {order.address?.zipCode || ""}
+                                        {order.address?.pinCode || order.address?.zipCode || ""}
                                     </p>
                                 </div>
 
@@ -202,7 +264,9 @@ const Orders = () => {
                                 {/* Payment Info */}
                                 <div className="text-sm text-gray-300">
                                     <p className="flex flex-col gap-1">
-                                        <span className="text-xs">Method: {order.paymentMethod || "COD"}</span>
+                                        <span className="text-xs">
+                                            Method: {order.paymentMethod || order.paymentType || "COD"}
+                                        </span>
                                         <span className="text-xs">
                                             Date: {order.date ? new Date(order.date).toLocaleDateString() : "N/A"}
                                         </span>

@@ -6,7 +6,7 @@ const WhatsAppButton = () => {
   
   // Replace with your actual WhatsApp number (include country code without + or spaces)
   // Example: for +92 300 1234567, use: 923001234567
-  const whatsappNumber = "923001234567"; // Replace with your number
+  const whatsappNumber = "+923378679555"; // Replace with your number
   const message = "Hello! I'm interested in your products."; // Default message
   
   const handleWhatsAppClick = () => {

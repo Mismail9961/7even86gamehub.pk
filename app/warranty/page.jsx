@@ -205,7 +205,7 @@ export default function WarrantyPage() {
           
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center px-2">
             <a
-              href="https://wa.me/923001234567"
+              href="https://wa.me/923378679555"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg sm:rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-green-600/50 text-xs sm:text-sm lg:text-base"
